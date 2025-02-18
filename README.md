@@ -25,9 +25,9 @@ https://bandv1.denbi.uni-tuebingen.de/
 |Cajal Advanced Neuroscience training|21|France|Oct 2023|
 |EMBO Practical course: Advanced methods in bioimage analysis|26|Germany|Sept 2023|
 |EMBO Practical course: Drosophila genetics and genomics|25|Germany|Jul 2023|
-|EMBO Practical course: Imaging-based spatial-omics|20|Italy,Virtual|Jun 2023
+|EMBO Practical course: Imaging-based spatial-omics|20|Italy,Virtual|Jun 2023|
 |EMBL-MPI-FMI: Beginer course for python based image analysis using skimage and napari|50|Germany,Virtual|Jun 2023|	
-|EMBL course: Deep learning for image analysis 24|Germany|Jun 2023|
+|EMBL course: Deep learning for image analysis|24|Germany|Jun 2023|
 |EMBO Practical course: Current method in cell biology|24|Germany|Sept 2022|
 |EMBO Practical course: advances in cryo-electron microscopy and 3D image processing|24|Germany|Aug 2022|	
 |NEUBIAS Defragmentation training school|25|Virtual|Aug 2022|
