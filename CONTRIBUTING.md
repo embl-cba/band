@@ -2,7 +2,7 @@
 
 First of all, thank you so much for considering to contribute to BAND!!!
 We really appreciate all kinds of contributions:
-If you find problems using BAND or have an idea how to improve it, please consider [opening an issue][main-repo-issues].
+If you find problems using BAND or have an idea how to improve it, please consider [main-repo-issues].
 In case you consider contributing code to BAND, the following guide should get you started!
 
 
@@ -15,17 +15,17 @@ In case you consider contributing code to BAND, the following guide should get y
 2. Clone your fork using [git][git]:
 
    ```bash
-   git clone https://git.embl.de/<your_gitlab_handel>/create-band.git
+   git clone https://github.com/<your_github_handel>/band.git
    ```
 
 3. Setup the upstream remote to be able to pull in any changes from the original repo
 
    ```bash
-   git remote add upstream https://git.embl.de/grp-cbbcs/create-band.git
+   git remote add upstream https://github.com/embl-cba/band.git
    ```
 
 4. Create a branch to work on
-   We follow the [GitLab Flow][gitlab-flow] where new changes are first introduced into the `develop` branch before being release on the main branch.
+   We follow the Git Flow where new changes are first introduced into the `develop` branch before being release on the main branch.
    If you want to work on a new feature, follow these steps:
    
    ```bash
@@ -58,11 +58,7 @@ After testing your changes locally and making sure all updated files have been c
 git push --set-upstream origin <your_branch_name>
 ```
 
-Go to the [main repository to open a pull request][main-repo-pulls].
+Go to the main repository to open a pull request.
 Make sure to use the `develop` branch as a base.
 
 
-[git]: https://git-scm.com/
-[gitlab-flow]: https://docs.gitlab.com/ee/topics/gitlab_flow.html
-[main-repo-issues]: https://git.embl.de/grp-cbbcs/create-band/-/issues
-[main-repo-pulls]: https://git.embl.de/grp-cbbcs/create-band/-/merge_requests
