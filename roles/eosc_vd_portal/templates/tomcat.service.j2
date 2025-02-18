@@ -1,0 +1,12 @@
+[Unit]
+Description=Tomcat
+
+[Service]
+Type=forking
+ExecStart={{tomcat_dir}}/bin/startup.sh
+KillMode=process
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

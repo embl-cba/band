@@ -1,0 +1,9 @@
+- name: "restart sshd"
+  service: name=sshd state=restarted
+  sudo: true
+  when: ansible_distribution == 'CentOS'
+
+- name: "restart ssh"
+  service: name=ssh state=restarted
+  sudo: true
+  when: ansible_distribution == 'Ubuntu'

@@ -1,0 +1,4 @@
+---
+nfs_server: "192.168.0.xx" # YOUR NFS SERVER IP
+nfs_options: "-rw,nfsvers=4,hard,intr,nosuid,nodev,timeo=15,retrans=5,nolock"
+nfs_path: "/mnt/exmaple" # YOUR NFS PATH

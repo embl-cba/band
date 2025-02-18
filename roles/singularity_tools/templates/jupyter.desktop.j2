@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Jupyter Notebook
+Icon=/usr/share/pixmaps/jupyter.png
+Exec={{ singularity_bin }} run -B /home/public_share_data:/home/public_share_data -B /home/public_share_workflow:/home/public_share_workflow {{container_dir}}/jupyter
+Categories=eosc;
+MimeType=application/x-qgis-project;image/tiff;image/jpeg;image/jp2;application/x-raster-aig;application/x-mapinfo-mif;application/x-esri-shape;
+Keywords=map;globe;postgis;wms;wfs;ogc;osgeo;
+X-Desktop-File-Install-Version=0.22

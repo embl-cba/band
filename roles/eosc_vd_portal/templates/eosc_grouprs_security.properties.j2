@@ -1,0 +1,39 @@
+###########################################################################
+#### Keycloak Settings
+###########################################################################
+security.oauth2.resource.token-info-uri={{eosc_token_info_uri}}
+security.oauth2.resource.jwt.key-uri={{eosc_jwkUrl}}
+security.oauth2.resource.clientsecret={{eosc_group_resource_clientsecret}}
+security.oauth2.resource.clientid={{eosc_group_resource_clientid}}
+security.oauth2.resource.resourceid={{eosc_resource_resourceid}}
+
+# Required LDAP settings
+ldap-provider-url = {{ldapURI}}
+ldap-search-base-dn = {{ldapUserBase}}
+ldap-search-filter = mail=%s
+
+# Optional LDAP settings - no auth if omitted
+ldap-security-principal = cn=admin,{{ldapBase}}
+ldap-security-password = passw0rd
+
+
+# LDAP search results are cached here
+cache-file = {{eosc_dir}}/eosc-grouprs-cache.db
+cache-expiry-hours = 24
+admin-email-notify-problem = yi.sun@embl.de
+admin-email = sunyi000@gmail.com
+admin-email-password = Iynus1020#
+#optional
+admin-email-smtp-host = smtp.gmail.com
+#optional
+admin-email-smtp-port = 465
+
+#################newly added for group management ###############
+ldap-projects-cn = projects
+ldap-projects-member-label = member
+ldap-user-base-dn = {{ldapUserBase}}
+ldap-group-base-dn = {{ldapGroupBase}}
+ldap-group-member-label = memberUid
+ldap-group-owner-label = ownerUid
+ldap-group-gid-label = gidNumber
+ldap-group-description-label = description

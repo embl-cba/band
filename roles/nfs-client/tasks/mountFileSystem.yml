@@ -1,0 +1,32 @@
+--- 
+- name: "stop fail2ban"
+  service: name=fail2ban state=stopped
+  sudo: true
+
+- name: "Mounting NFS mounts"
+  mount: name={{ item.name }} src="{{ item.ipv4 }}:{{ item.src }} " fstype={{ item.fstype }} opts={{ item.opts }} state=mounted
+  with_items: nfsMounts
+  notify: "restart rpcbind"
+  notify: "restart idmap"
+  sudo: true 
+  ignore_errors: true
+  register: firstMount
+  when: nfsMounts is defined 
+
+- name: "Wait for nfs to stabailse"
+  command: sleep 60
+  delegate_to: 127.0.0.1
+  when: firstMount | failed
+
+- name: "Mounting NFS mounts"
+  mount: name={{ item.name }} src=" {{ item.ipv4 }}:{{ item.src }} " fstype={{ item.fstype }} opts={{ item.opts }} state=mounted
+  with_items: nfsMounts
+  notify: "restart idmap"
+  notify: "restart rpcbind"
+  sudo: true 
+  when: nfsMounts is defined and firstMount | failed
+
+- name: "restart fail2ban"
+  service: name=fail2ban state=started
+  sudo: true
+

@@ -1,0 +1,13 @@
+## YAML Template.
+---
+- include_vars: "{{ ansible_distribution }}_{{ ansible_distribution_major_version }}.yml"
+
+- name: Installing packages for the portal
+  apt: name="{{login_packages}}" update_cache=yes cache_valid_time=3600 state=present force_apt_get=yes
+  sudo: true
+  when: ansible_distribution == "Debian"
+
+- name: Installing MySQL RedHat
+  yum: name={{login_packages}}
+  sudo: true
+  when: ansible_distribution == "CentOS"

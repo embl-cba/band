@@ -1,0 +1,22 @@
+---
+- name: "Install open ldap package yum"
+  sudo: true
+  yum: name={{ item }} state=present
+  with_items:
+    - openldap
+    - openldap-clients
+    - sssd
+    - sssd-common
+    - sssd-client
+    - nss
+    - nss-tools
+  when: ansible_distribution == 'CentOS'
+
+- name: "Install open ldap package apt"
+  sudo: true
+  action: apt pkg={{ item }} state=present
+  with_items:
+    - ldap-utils
+    - sssd 
+    - libpam-sss 
+  when: ansible_distribution == 'Ubuntu'

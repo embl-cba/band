@@ -1,0 +1,42 @@
+## YAML Template.
+---
+- name: install python-pip python-dev
+#  apt: name = '{{item}}' state=installed
+#  with_items:
+#        - python-pip
+#        - python-dev
+  command: apt install -y python-pip python-dev
+
+- name: install ipython, ipython-notebook
+  command: apt install -y ipython ipython-notebook
+#  apt: name = '{{item}}' state=installed
+#  with_items:
+#        - ipython
+#        - ipython-notebook
+
+- name: install jupyter
+  command: pip2 install jupyter
+
+- name: install python3-pip python3-dev
+  command: apt install -y python3-pip python3-dev
+#  apt: name = '{{item}}' state=installed
+#  with_items:
+#        - python3-pip
+#        - python3-dev
+
+- name: install ipython, ipython-notebook
+  command: python3 -m pip install ipykernel
+
+- name: install ipykernel user
+  command: python3 -m ipykernel install --user 
+
+- name: create jupyter container working directory
+  file: path=/opt/jupyter-notebook state=directory
+
+- name: copy startnotebook.sh script to remote
+  copy: src=startnotebook.sh dest=/opt/jupyter-notebook/
+
+- name: make sure start script is executable
+  file: path=/opt/jupyter-notebook/startnotebook.sh mode=0755
+
+

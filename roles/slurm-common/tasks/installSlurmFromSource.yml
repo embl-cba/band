@@ -1,0 +1,39 @@
+- name: remove all install
+  shell: rm -rf /tmp/slurm-{{ slurm_version }}
+  sudo: true 
+  when: force_slurm_recompile is defined
+
+- name: remove all install
+  shell: rm -rf {{ slurm_dir }}
+  sudo: true 
+  when: force_slurm_recompile is defined
+
+- name: get slurm
+  #shell: wget --no-check-certificate https://cvl.massive.org.au/slurm-{{ slurm_version }}.tar.bz2
+  shell: wget https://download.schedmd.com/slurm/slurm-{{ slurm_version }}.tar.bz2
+  args:
+    chdir: /tmp
+    creates: /tmp/slurm-{{ slurm_version }}.tar.bz2
+
+- name: untar slurm
+  shell: tar jxf /tmp/slurm-{{ slurm_version }}.tar.bz2
+  args:
+    chdir: /tmp
+    creates: /tmp/slumr-{{ slurm_version }}
+
+- name: build slurm
+  shell: ./configure --prefix={{ slurm_dir }} --with-munge={{ munge_dir }} && make
+  args:
+    chdir: /tmp/slurm-{{ slurm_version }}
+    creates: /tmp/slurm-{{ slurm_version }}/src/srun/srun
+
+- name: install slurm
+  shell: make install
+  sudo: true
+  args:
+    chdir: /tmp/slurm-{{ slurm_version }}
+    creates: "{{ slurm_dir }}/bin/srun"
+
+    #- name: add slurm log rotate config
+    #  template: src=slurmlog.j2 dest=/etc/logrotate.d/slurm mode=644
+    #  sudo: true

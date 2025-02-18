@@ -1,0 +1,33 @@
+## YAML Template.
+---
+- name: create mate-eosc.directory file in /usr/share/mate/desktop-directories
+  template:
+    src:  mate-eosc.directory.j2
+    dest: "/usr/share/mate/desktop-directories/mate-eosc.directory"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: create mate-da.directory file in /usr/share/mate/desktop-directories
+  template:
+    src:  mate-da.directory.j2
+    dest: "/usr/share/mate/desktop-directories/mate-da.directory"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: create mate-programming.directory file in /usr/share/mate/desktop-directories
+  template:
+    src:  mate-programming.directory.j2
+    dest: "/usr/share/mate/desktop-directories/mate-programming.directory"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: add eosc category to mate-applications.menu in /etc/xdg/menus
+  template:
+    src:  mate-applications.menu.j2
+    dest: "/etc/xdg/menus/mate-applications.menu"
+    owner: root
+    group: root
+    mode: 0644

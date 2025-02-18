@@ -1,0 +1,92 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+#- name: add epel on CentOS 7
+#  shell: rpm -iUvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
+#  sudo: true
+#  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+#  ignore_errors: true
+
+#- name: add epel on CentOS 7
+#  shell: yum -y update
+#  sudo: true
+#  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+
+#- name: Install epel-release
+#  yum: name=epel-release-7-5.noarch state=present
+#  sudo: true
+#  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+
+#- name: Enable epel
+#  command: yum-config-manager --enable epel
+#  sudo: true
+#  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+
+- name: download latest epel-release
+  get_url: 
+    url: https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+    dest: /tmp/epel-release-7-13.noarch.rpm
+  when: ansible_distribution == "CentOS"
+
+- name: install epel-release
+  command: "rpm -Uvh /tmp/epel-release*rpm"
+  sudo: true
+  when: ansible_distribution == "CentOS"
+
+- name: update yum
+  yum: name=* state=latest
+  sudo: true
+  when: ansible_distribution == "CentOS"
+
+- name: install lua
+  yum: name={{ item }} state=installed
+  with_items:
+    - lua
+    - lua-filesystem
+    - lua-posix
+    - tcl
+    - rsync
+    - gcc
+    - lua-devel
+  sudo: true
+  when: ansible_distribution == "CentOS"
+
+- name: install lua
+  apt: name={{ item }} state=installed
+  with_items:
+    - lua5.2
+    - lua-filesystem
+    - lua-bitop
+    - lua-posix
+    - liblua5.2-0
+    - liblua5.2-dev
+    - tcl
+  sudo: true
+  when: ansible_distribution == "Ubuntu"
+
+- name: install Lmod
+  yum: 
+    name: Lmod
+    state: present
+  sudo: true
+  when: ansible_distribution == "CentOS"
+  #- name: Download LMOD
+  #  get_url:
+  #    url=http://downloads.sourceforge.net/project/lmod/Lmod-{{ lmod_version }}.tar.bz2
+  #    dest={{source_dir}}/Lmod-{{ lmod_version }}.tar.bz2
+  #    mode=0444
+
+    #- name: Uncompress LMOD
+    #  unarchive:
+    #    src={{ source_dir }}/Lmod-{{ lmod_version }}.tar.bz2
+    #    dest={{ source_dir }}
+    #    copy=no
+    #    creates={{source_dir}}/Lmod-{{ lmod_version }}/README
+
+    #- name: Compile and install Lmod
+    #  command: ./configure --prefix={{ soft_dir }} --with-mpathSearch=YES --with-caseIndependentSorting=YES && make install LUA_INCLUDE={{ lua_include }}
+    #  #shell: cd {{ source_dir }}/Lmod-{{ lmod_version }}; ./configure --prefix={{ soft_dir }} --with-mpathSearch=YES --with-caseIndependentSorting=YES && make install LUA_INCLUDE={{ lua_include }}
+    #  args:
+    #    chdir: "{{ source_dir }}/Lmod-{{ lmod_version }}"
+    #    creates: "{{ soft_dir }}/lmod/{{ lmod_version }}"
+    #  sudo: true

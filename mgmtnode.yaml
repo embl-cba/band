@@ -1,0 +1,40 @@
+---
+heat_template_version: 2016-10-14
+parameters:
+  mynodename:
+    type: string
+  ssh_key:
+    type: string
+  image:
+    type: string
+  avz:
+    type: string
+  project_name:
+    type: string
+  ansible_ssh_user:
+    type: string
+  security_groups:
+    type: json
+  network_id:
+    type: string
+    label: Network ID
+    default: c780cc47-4f4b-4080-89fb-1d64edc4b1b6
+
+resources:
+
+  instance:
+    type: OS::Nova::Server
+    properties:
+      availability_zone: { get_param: avz }
+      flavor: m1.small
+      networks:
+        - network : { get_param: network_id }       
+      image: { get_param: image }
+      key_name: { get_param: ssh_key }
+      security_groups: { get_param: security_groups }
+      name: { get_param: mynodename }
+      metadata:
+       ansible_host_groups: [ ManagementNodes ]
+       ansible_ssh_user: { get_param: ansible_ssh_user }
+       project_name: { get_param: project_name }
+

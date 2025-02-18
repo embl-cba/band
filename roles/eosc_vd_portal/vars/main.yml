@@ -1,0 +1,66 @@
+### tomcat, modify version and download url
+apache_tomcat_version: 9.0.62
+apache_tomcat_url: "http://apache.mirror.digitalpacific.com/tomcat/tomcat-9/v{{apache_tomcat_version}}/bin/apache-tomcat-{{apache_tomcat_version}}.tar.gz"
+
+### portal client, 
+portal_client_version: 0.0.1
+portal_client_package: "https://git.embl.de/ysun/job-client/downloads/client.war"
+
+### resource server
+resource_server_version: 0.0.4
+resource_server_package: "https://git.embl.de/ysun/keycloak-resource-server.jar"
+
+### group resource server
+gr_resource_server_version: 0.0.2
+gr_resource_server_package: "https://git.embl.de/ysun/keycloak-group-rs/downloads/keycloak-group-rs.jar"
+
+### eosc portal
+eosc_js_version: 0.0.2
+eosc_js_package: "https://git.embl.de/ysun/vd-portal-js/downloads/vd-portal-js-{{eosc_js_version}}.tar.gz"
+
+### guacamole
+guacamole_version: 1.0.0
+guacamole_package: "http://apache.mirror.digitalpacific.com.au/guacamole/{{guacamole_version}}/binary/guacamole-{{guacamole_version}}.war"
+
+### guacamole home
+guacamole_home: /etc/guacamole
+
+### massive plugin (guacamole plugin)
+massive_plugin_version: 1.0.0
+massive_plugin_package: https://github.com/monash-merc/massive-guacamole-remote/downloads/massive-guacamole-remote.jar
+## gson 2.4
+gson_24_url: https://repo1.maven.org/maven2/com/google/code/gson/gson/2.4/gson-2.4.jar
+
+### tomcat dir
+tomcat_dir: /opt/apache-tomcat
+###  dir
+cache_location: "{{eosc_dir}}/tmpfs/eosc.cache"
+
+###certificates
+certs_dir: /etc/certs
+
+### tempfs
+temp_dir: "{{eosc_dir}}/tmpfs"
+
+## prod. these configurations are from your keycloak server, the values below are just example, modify according to your own keycloak server
+eosc_endpoint: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/auth
+eosc_token_endpoint: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/token
+eosc_client_id: eosc-client
+eosc_client_secret: #your_own_secret from keycloak
+eosc_redirect: "https://{{eosc_portal_hostname}}/client/api/oauth/callback/eosc"
+eosc_issuer: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc
+eosc_jwkUrl: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/certs
+# resource server
+eosc_token_info_uri:  https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/token/introspect
+eosc_resource_clientsecret: # your client secret here
+eosc_resource_clientid: resource
+eosc_resource_resourceid: eosc-client
+eosc_resource_authority_check: hasAuthority('USER')
+# group manager resource server (if you are using it)
+eosc_group_resource_clientsecret: # client secret from keyloak
+eosc_group_resource_clientid: groupmanager
+
+login_host: "{{ hostvars[groups['LoginNodes'][0]]['ansible_ssh_host'] }}"
+resource_server_port: 9001
+group_resource_server_port: 9002
+guad_port: 4822

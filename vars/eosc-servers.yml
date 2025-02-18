@@ -1,0 +1,18 @@
+## YAML Template.
+---
+ansible_os_family: RedHat
+
+# Java versions used.
+java_major: 8
+java_minor: 171
+#java_build: 15
+java_home: /usr/lib/jvm/java-8-oracle
+
+install_dir: /mnt
+
+log_home: /mnt/log
+
+httpd_confd_path: /etc/httpd/conf.d
+httpd_conf_path: /etc/httpd/conf
+
+

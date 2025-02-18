@@ -1,0 +1,30 @@
+## YAML Template.
+---
+
+- name: copy .desktop files to /usr/share/applications
+  template:
+    src:  "{{item}}.desktop.j2"
+    dest: "/usr/share/applications/{{item}}.desktop"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+      - rstudio
+
+- name: copy binary
+  template:
+    src:  "{{item}}.j2"
+    dest: "/usr/bin/{{item}}"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+      - R
+      - Rscript
+
+
+
+- name: copy icon images to /usr/share/pixmaps/
+  copy: src={{item}}.png dest=/usr/share/pixmaps
+  with_items:
+      - rstudio

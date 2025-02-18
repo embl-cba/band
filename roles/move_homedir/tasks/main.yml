@@ -1,0 +1,24 @@
+- name: make /local_home
+  file: path=/local_home owner=root group=root state=directory
+  sudo: true 
+
+- name: copy the {{ ansible_ssh_user }} home
+  shell: cp -ar /home/{{ ansible_ssh_user }} /local_home
+  ignore_errors: true
+  sudo: true
+  register: home_copied
+
+
+- name: edit passwd file
+  lineinfile:
+  args:
+    dest: /etc/passwd
+    regexp: '{{ ansible_ssh_user }}:x:(.*):(.*):(.*):/home/{{ ansible_ssh_user }}:(.*)'
+    line: '{{ ansible_ssh_user }}:x:\1:\2:\3:/local_home/{{ ansible_ssh_user }}:\4'
+    backrefs: yes
+  sudo: true
+  register: edit
+
+
+
+

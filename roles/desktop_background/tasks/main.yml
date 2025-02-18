@@ -1,0 +1,32 @@
+## YAML Template.
+---
+- name: copy eosc.png over
+  sudo: yes
+  copy: src="embl-ic.jpg" dest="/usr/share/backgrounds/embl-ic.jpg" mode=0644
+  when: ansible_distribution =="CentOS"
+
+- name: copy the background image config file over
+  template:
+    src: default.xml.j2
+    dest: "/usr/share/backgrounds/default.xml"
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_distribution =="CentOS"
+
+- name: copy eosc.png over
+  sudo: yes
+  copy: src="embl-ic.jpg" dest="/usr/share/backgrounds/ubuntu-mate-common/embl-ic.jpg" mode=0644
+  when: ansible_distribution =="Ubuntu"
+  
+- name: overwrite default background
+  sudo: yes
+  command: mv /usr/share/backgrounds/ubuntu-mate-common/Ubuntu-Mate-Cold.jpg /usr/share/backgrounds/ubuntu-mate-common/Ubuntu-Mate-Cold.jpg.o
+  when: ansible_distribution =="Ubuntu"  
+  
+- name: overwrite default background
+  sudo: yes
+  command: mv /usr/share/backgrounds/ubuntu-mate-common/eosc.png /usr/share/backgrounds/ubuntu-mate-common/Ubuntu-Mate-Cold.jpg
+  when: ansible_distribution =="Ubuntu"  
+
+

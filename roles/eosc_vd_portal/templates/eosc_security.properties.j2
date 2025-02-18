@@ -1,0 +1,18 @@
+###########################################################################
+# Required SSH key signing certificate authority settings                 #
+# Generate using ssh-keygen (e.g. ssh-keygen -b 4096 -f server_ca)        #
+# Passphrase required if private key is encrypted                         #
+###########################################################################
+ssh-ca-public-key = {{eosc_ssh_ca_dir}}/server_ca.pub
+ssh-ca-private-key = {{eosc_ssh_ca_dir}}/server_ca
+ssh-ca-private-key-passphrase = {{ca_pass_prase}}
+ssh-cert-max-valid-days = 7
+###########################################################################
+#### Keycloak Settings
+###########################################################################
+security.oauth2.resource.token-info-uri={{eosc_token_info_uri}}
+security.oauth2.resource.jwt.key-uri={{eosc_jwkUrl}}
+security.oauth2.resource.clientsecret={{eosc_resource_clientsecret}}
+security.oauth2.resource.clientid={{eosc_resource_clientid}}
+security.oauth2.resource.resourceid={{eosc_resource_resourceid}}
+security.oauth2.resource.authority-check={{eosc_resource_authority_check}}

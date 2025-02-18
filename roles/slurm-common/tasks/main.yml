@@ -1,0 +1,168 @@
+---
+- name: create munge group
+  group: name=munge system=yes gid=498
+  sudo: true
+
+- name: create munge user
+  user: name=munge group=munge system=yes createhome=no uid=498
+  sudo: true
+
+- name: create slurm group
+  group: name=slurm system=yes gid=497
+  sudo: true
+
+- name: create slurm user
+  user: name=slurm group=slurm system=yes createhome=no uid=497
+  sudo: true
+
+- name: make sure slurm conf dir exists
+  file: dest={{ slurm_dir }}/etc state=directory
+  sudo: true
+
+- name: make sure slurm lock dir exists
+  file: dest=/var/lock/subsys state=directory owner=root group=root mode=755
+  sudo: true
+
+- name: create data directory
+  file: path={{ slurmdatadir }} state=directory owner=slurm group=slurm mode=755
+  sudo: true
+  when: slurmdatadir is defined 
+      
+- name: stat run directory
+  stat: path={{ slurmpiddir }} 
+  register: runstat
+  when: slurmpiddir is defined
+
+- name: create run directory
+  file: path={{ slurmpiddir }} state=directory owner=root group=root mode=750
+  sudo: true
+  when: slurmpiddir is defined and not runstat.stat.exists
+
+- name: create shared state directory
+  file: path={{slurmsharedstatedir }} state=directory owner=slurm group=slurm mode=750
+  sudo: true
+  run_once: true
+  when: usesharedstatedir
+
+- name: symlink shared state dir
+  file: path={{ slurmstatedir }} src={{ slurmsharedstatedir }} state=link force=yes
+  sudo: true
+  when: usesharedstatedir
+
+- name: create state directory
+  file: path={{ slurmstatedir }} state=directory owner=slurm group=slurm mode=750
+  sudo: true
+  when: slurmstatedir is defined  and not usesharedstatedir
+
+- name: create log directory
+  file: path={{ slurmlogdir }} state=directory owner=slurm group=slurm mode=750
+  sudo: true
+  when: slurmlogdir is defined 
+
+# - name: create greps directory
+#   file: path={{ slurm_dir }}/etc/gres state=directory owner=slurm group=slurm mode=755
+#   sudo: true
+
+- name: install deps
+  yum: name={{ item }} state=present
+  with_items:
+    - perl
+    - perl-DBI
+    - openssl-devel
+    - gcc
+    - rpm-build
+    - wget
+    - openssl-devel
+    - readline-devel
+    - pam-devel
+    - perl-ExtUtils-MakeMaker
+    - bzip2-devel
+    - hwloc
+    - hwloc-devel
+    - lua
+    - lua-devel
+  sudo: true
+  when: ansible_distribution == 'CentOS'
+
+- name: install deps
+  apt: name={{ item }} state=installed update_cache=yes
+  sudo: true
+  with_items:
+    - gcc
+    - wget
+    - libssl-dev
+    - libpam0g-dev
+    - libbz2-dev
+    - make
+    - perl
+    - libdbi-perl
+    - lua5.2
+    - hwloc
+    - libhwloc-dev
+  when: ansible_distribution == 'Ubuntu'
+
+- include: installMungeFromSource.yml
+
+- name: chown mungedir
+  file: path={{ munge_dir }} state=directory owner=munge recurse=yes
+  sudo: true
+
+- name: make munge logdir
+  file: path={{ munge_dir }}/var/log/munge state=directory owner=munge mode=700
+  sudo: true
+
+- name: install munge key
+  template: src=munge_key.j2 dest={{ munge_dir }}/etc/munge/munge.key owner=munge mode=600
+  sudo: true
+
+- name: enable munge on boot
+  systemd:
+    name: munge
+    enabled: yes
+  sudo: true
+
+- name: now enable munge
+  service: name=munge enabled=yes
+  sudo: true
+
+
+- include: installSlurmFromSource.yml
+
+
+- name: install gres config file 
+  template: src=gres.conf.j2 dest={{ slurm_dir }}/etc/gres.conf mode=644
+  sudo: true
+
+
+- name: install slurm prolog
+  template: src=slurm.prolog.j2 dest={{ slurm_dir }}/bin/slurm.prolog mode=755
+  sudo: true
+
+- name: install slurm epilog
+  template: src=slurm.epilog.j2 dest={{ slurm_dir }}/bin/slurm.epilog mode=755
+  sudo: true
+
+- name: install slurm.conf
+  copy: src=files/slurm.conf dest={{ slurm_dir }}/etc/slurm.conf
+  sudo: true
+  when: slurm_use_vpn==False 
+
+- name: install slurm.conf
+  template: src=slurm-vpn.conf.j2 dest={{ slurm_dir }}/etc/slurm.conf
+  sudo: true
+  when: slurm_use_vpn==True
+
+- name: setup envirnment variables 
+  template: src=slurm_setup.sh.j2 dest=/etc/profile.d/slurm_setup.sh
+  sudo: true
+
+- name: setup plugin
+  template: src=job_submit.lua.j2 dest={{ slurm_dir }}/etc/job_submit.lua mode=755
+  delegate_to: "{{ slurmctrl }}"
+  run_once: true
+  sudo: true
+  when: slurm_lua is defined
+
+- include: installCgroup.yml
+- include: installNhc.yml
+

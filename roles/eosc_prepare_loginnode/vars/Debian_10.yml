@@ -1,0 +1,7 @@
+## YAML Template.
+###################
+---
+login_packages:
+  - python-ldap
+  - python-mysqldb
+

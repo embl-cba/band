@@ -1,0 +1,22 @@
+### packages
+---
+portal_packages:
+  - build-essential
+  - openjdk-11-jdk
+  - vim
+  - git
+  - nginx
+  - mongodb
+  - maven
+  - libpng-dev
+  - libjpeg-dev
+  - libcairo2-dev
+  - libssl-dev
+  - libpango1.0-dev
+  - libssh-dev
+  - libvncserver-dev
+  - libfreerdp-dev
+  - libossp-uuid-dev
+  - docker.io
+  - python-pip
+

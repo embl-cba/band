@@ -1,0 +1,27 @@
+## YAML Template.
+---
+- name: prepare log home
+  file: path={{ log_home }}  state=directory owner=root group=root recurse=yes
+
+- name: copy the lograte rotate file settings over
+  template:
+    src: logrotate.conf.j2
+    dest: "/etc/logrotate.conf"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: copy the rsyslog config file
+  template:
+    src: rsyslog.conf.j2
+    dest: "/etc/rsyslog.conf"
+    owner: root
+    group: root
+    mode: 0644
+  when: ansible_os_family == 'RedHat'
+
+- name: restart the rsyslogd
+  command: >
+    service rsyslog restart
+  sudo: true
+

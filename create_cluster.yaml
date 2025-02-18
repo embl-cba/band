@@ -1,0 +1,115 @@
+---
+heat_template_version: 2016-10-14
+description: "create cluster"
+
+parameter:
+  # metadata:
+  #  type: json
+  ubuntu_1804_image_id:
+    type: string
+    label: Image ID
+    description: Ubuntu Image
+    default: ccef7132-7442-4311-bb8c-be8eee75012b
+  centos_7_image_id:
+    type: string
+    label: Image ID
+    description: Centos Image
+    default: 12106092-1f47-4c57-adfa-2aa9d46c5764
+  ssh_key:
+    type: string
+    default: yisun
+  avz:
+    type: string
+    default: nova
+  project_name:
+    type: string
+    default: CBBCS
+  flavor:
+    type: string
+    description: instance flavor to be used
+    default: 8bd518f3-48c4-42fc-a97a-d7301c9dfd2f
+  count:
+    type: string
+    default: 3
+  network_id:
+    type: string
+    label: Network ID
+    description: EMBL IC VD private network
+    default: c780cc47-4f4b-4080-89fb-1d64edc4b1b6
+
+resources:
+  MgmtNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: 1
+    resource_def:
+      type: My::Server::MgmtNode
+      properties:
+        avz: { get_param: avz }
+        image: { get_param: centos_7_image_id }
+        ansible_ssh_user: centos
+        mynodename: mgmt-%index%
+        ssh_key: { get_param: ssh_key }
+        security_groups: [ default, heatslurmsecgroup, heatmysqlsecgroup,ssh-ping ]
+        project_name: { get_param: project_name }
+
+
+  LoginNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: 1
+    resource_def:
+     type: "OS::Nova::Server"
+     properties:
+      availability_zone: { get_param: avz }
+      flavor: m1.small
+      networks:
+        - network : { get_param: network_id } 
+      image: { get_param: centos_7_image_id }
+      key_name: { get_param: ssh_key }
+      name: login-%index%
+      security_groups: [ default, heatslurmsecgroup, ssh-ping ]
+      metadata:
+       ansible_host_groups: [ LoginNodes ]
+       ansible_ssh_user: centos
+       project_name: { get_param: project_name }
+
+  DesktopNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: {get_param: count }
+    resource_def:
+     type: "OS::Nova::Server"
+     properties:
+      availability_zone: { get_param: avz }
+      flavor: { get_param: flavor }
+      networks:
+        - network : { get_param: network_id }
+      image: { get_param: centos_7_image_id }
+      key_name: { get_param: ssh_key }
+      name: node-%index%
+      security_groups: [ default, heatslurmsecgroup, ssh-ping]
+      metadata:
+       ansible_host_groups: [ DesktopNodes, default_partition, centos_partition ]
+       ansible_ssh_user: centos
+       project_name: { get_param: project_name }
+
+  PortalNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: 1
+    resource_def:
+     type: "OS::Nova::Server"
+     properties:
+      availability_zone: { get_param: avz }
+      networks:
+       - network : { get_param: network_id }
+      flavor: m1.medium
+      image: ccef7132-7442-4311-bb8c-be8eee75012b
+      key_name: { get_param: ssh_key }
+      name: band-portal
+      security_groups: [ default, http,ssh-ping ]
+      metadata:
+       ansible_host_groups: [ PortalNodes, ubuntu_partition ]
+       ansible_ssh_user: ubuntu
+       project_name: { get_param: project_name }

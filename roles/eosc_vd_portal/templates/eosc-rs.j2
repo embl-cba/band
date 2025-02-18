@@ -1,0 +1,6 @@
+#!/bin/bash
+VERSION="{{resource_server_version}}"
+JAR_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+log_file="{{eosc_dir}}/log/eosc-resource-server.log"
+cd $JAR_DIR
+exec java -jar resource-server-$VERSION.jar $@ >> ${log_file} 2>&1 &

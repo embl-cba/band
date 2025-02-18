@@ -1,0 +1,13 @@
+
+- hosts: '*'
+  tasks:
+  - include_vars: vars/passwords.yml 
+  - include_vars: vars/names.yml
+  - include_vars: vars/ldapConfig.yml
+  - include_vars: vars/slurm.yml 
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: calculateEtcHosts }
+  - { role: calculateExports }
+  - { role: calculateSlurmConf }

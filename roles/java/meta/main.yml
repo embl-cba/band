@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: yisun
+  description: Oracle Java JDK installation
+  company: TERN
+  license: BSD
+  min_ansible_version: 1.2
+  categories:
+  - development
+dependencies: []
+  

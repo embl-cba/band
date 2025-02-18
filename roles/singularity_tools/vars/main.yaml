@@ -1,0 +1,4 @@
+---
+### hostname
+singularity_bin: "/usr/bin/singularity"
+container_dir: "/nfs/vd-containers" # singularity dir for all app containers

@@ -1,0 +1,34 @@
+- name: "Clear yum cache"
+  command: yum clean all
+  sudo: true
+  when: ansible_distribution == 'CentOS'
+
+- name: remove the bad repo on centos7 images
+  file: path=/etc/yum.repos.d/rdo-release.repo state=absent
+  sudo: true
+
+- name: "Make yum cache"
+  command: yum makecache
+  sudo: true
+  when: ansible_distribution == 'CentOS'
+
+# For some reason ed went missing from the NeCTAR official CentOS 7 image
+# This meant that fail2ban could ban you, but could never unban you
+- name: "make sure ed is installed"
+  yum: name=ed state=installed
+  sudo: true
+  when: ansible_distribution == 'CentOS'
+
+- apt: update_cache=yes
+  when: ansible_distribution == 'Ubuntu'
+  sudo: true 
+
+- name: udpate yum
+  yum: name=* state=latest
+  sudo: true
+  when: ansible_os_family == "RedHat"
+
+- name: install python3 on centos
+  yum: name=python3 state=installed
+  sudo: true
+  when: ansible_os_family == "RedHat"

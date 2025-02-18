@@ -1,0 +1,30 @@
+---
+
+-
+ name: "Installing Apache"
+ sudo: true
+ yum: name={{ item }} state=present
+ with_items:
+  - mod_ssl
+  - mod_wsgi 
+  - openssl
+  - httpd
+  - httpd-devel
+-
+ name: Setting httpd.conf
+ sudo: true
+ replace: dest=/etc/httpd/conf/httpd.conf regexp="^#ServerName www.example.com:80" replace="ServerName {{ ansible_fqdn }}"
+
+-
+ name: "Templating default-ssl site"
+ template: src=default-ssl.j2 dest=/etc/httpd/conf.d/ssl.conf owner=apache group=apache
+ sudo: true
+
+-
+ name: Templating wsgi.conf
+ sudo: true
+ template: src=wsgi.conf.j2 dest=/etc/httpd/conf.d/wsgi.conf owner=root group=root
+-
+ name: Restarting Apache
+ sudo: true
+ service: name=httpd state=restarted

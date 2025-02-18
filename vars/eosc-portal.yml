@@ -1,0 +1,6 @@
+## YAML Template.
+---
+eosc_dir: /opt/eosc
+eosc_ssh_ca_dir: "{{eosc_dir}}/certs"
+ca_pass_prase: PASSWORD_HERE
+eosc_portal_hostname: HOSTNAME_HERE

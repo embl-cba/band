@@ -1,0 +1,23 @@
+---
+# change based on your preferred slurm configuration
+slurm_use_vpn: False
+slurmctlddebug: {level: 9, log: '/var/log/slurm/slurmctld.log'}
+slurmddebug: {level: 9, log: '/var/log/slurm/slurmd.log'}
+slurmschedlog: {level: 9, log: '/var/log/slurm/slurmsched.log'}
+slurmdbdlog: {level: 9, log: '/var/log/slurm/slurmdbd.log'}
+slurmfairshare: {def: false, val: 10000}
+slurmdatadir: "/var/spool/slurm"
+slurmselecttype: "select/cons_res"
+slurmfastschedule: "1"
+slurmschedulertype: "sched/backfill"
+
+# GPU lists, remove if you don't have gpu
+slurm_gres_list:
+  - {name: "gpu", file: "/dev/nvidia0"}
+  - {name: "gpu", file: "/dev/nvidia1"}
+  - {name: "gpu", file: "/dev/nvidia2"}
+  - {name: "gpu", file: "/dev/nvidia3"}
+  - {name: "gpu", file: "/dev/nvidia4"}
+  - {name: "gpu", file: "/dev/nvidia5"}
+  - {name: "gpu", file: "/dev/nvidia6"}
+

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Cellprofiler4
+Icon=/usr/share/pixmaps/cellprofiler.png
+Exec=/usr/bin/singularity run /nfs/vd-containers/cp4
+Categories=Image Analysis;
+MimeType=application/x-qgis-project;image/tiff;image/jpeg;image/jp2;application/x-raster-aig;application/x-mapinfo-mif;application/x-esri-shape;
+Keywords=map;globe;postgis;wms;wfs;ogc;osgeo;
+X-Desktop-File-Install-Version=0.22

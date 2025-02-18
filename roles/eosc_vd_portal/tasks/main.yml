@@ -1,0 +1,317 @@
+## YAML Template.
+## For now, this role ONLY WORKS with Ubuntu (targeting 18.04)
+---
+- include_vars: "main.yml"
+- include_vars: "{{ ansible_distribution }}_{{ ansible_distribution_version }}_{{ ansible_architecture }}.yml"
+##################################################################
+###### neccessary packages
+- name: Installing packages for the portal
+  apt: name="{{portal_packages}}" update_cache=yes cache_valid_time=3600 state=present force_apt_get=yes
+  sudo: true
+
+
+
+#################################################################
+## /etc/guacamole
+- name: Create /etc/guacamole if not exists
+  file:
+    path: "{{ guacamole_home }}"
+    state: directory
+    mode: '0755'
+
+- name: Create /etc/guacamole/extensions if not exists
+  file:
+    path: "{{ guacamole_home }}/extensions"
+    state: directory
+    mode: '0755'
+
+- name: Create /etc/guacamole/lib if not exists
+  file:
+    path: "{{ guacamole_home }}/lib"
+    state: directory
+    mode: '0755'
+
+- name: copy gson_24
+  sudo: true
+  get_url:
+    url: "{{ gson_24_url }}"
+    dest: "{{ guacamole_home }}/lib/gson-2.4.jar"
+
+    #- name: copy massive plugin client
+    #  sudo: true
+    #  get_url:
+    #    url: "{{ massive_plugin_package }}"
+    #    dest: "{{ guacamole_home }}/extensions/massive-guacamole-remote-{{massive_plugin_version}}.jar"
+
+
+- name: templating guacamole.properties 
+  template: 
+    src: guacamole.properties.j2
+    dest: "{{guacamole_home}}/guacamole.properties"
+    owner: root
+    mode: 644
+  sudo: true
+
+
+###### Apache tomcat and webapps
+- name: Download and unarchive tomcat
+  sudo: true
+  unarchive:
+    src: "{{apache_tomcat_url}}"
+    dest: /opt
+    remote_src: yes
+
+- name: Create a symbolic link to apache tomcat
+  file:
+    src: "/opt/apache-tomcat-{{apache_tomcat_version}}"
+    dest: "{{tomcat_dir}}"
+    owner: root
+    group: root
+    state: link
+  sudo: true
+
+
+- name: copy client to tomcat
+  sudo: true
+  get_url:
+    url: "{{ portal_client_package }}"
+    dest: "{{ tomcat_dir }}/webapps/client.war"
+
+- name: copy guacamole client
+  sudo: true
+  get_url:
+    url: "{{ guacamole_package }}"
+    dest: "{{ tomcat_dir }}/webapps/guacamole.war"
+    checksum: sha256:93f66f43f4ea77011dc44df2aeeb297dd270cb0f34593d221e58968216a469cf
+
+## Centos is in /usr/lib
+- name: copy tomcat systemd
+  sudo: true
+  template: 
+    src: tomcat.service.j2
+    dest: /lib/systemd/system/tomcat.service
+    owner: root
+    mode: 644
+  
+- name: symlink to tomcat.server
+  file:
+    src: /lib/systemd/system/tomcat.service
+    dest: /etc/systemd/system/multi-user.target.wants/tomcat.service
+    owner: root
+    group: root
+    state: link
+  sudo: true
+
+- name: eosc.properties template
+  sudo: true
+  template: 
+    src: eosc.properties.j2
+    dest: "{{ tomcat_dir }}/lib/eosc.properties"
+    owner: root
+    mode: 644
+
+- name: Make sure tomcat is running
+  systemd:
+    state: restarted
+    name: tomcat
+    daemon_reload: yes
+
+
+##################################################################
+###### guacamole components
+## has to build guacamole server
+## or to use docker
+# - pip:
+#     name: docker
+
+# - name: pull guacd
+#   docker_image:
+#     name: guacamole/guacd
+#     source: pull
+
+# - name: Make sure guacd container is started
+#   docker_container:
+#     name: guacd
+#     image: guacamole/guacd
+#     state: started
+#     network_mode: host
+
+
+
+- name: Create /opt/eosc if not exists
+  file:
+    path: "{{ eosc_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create /opt/eosc/log if not exists
+  file:
+    path: "{{ eosc_dir }}/log"
+    state: directory
+    mode: '0755'
+
+- name: copy xml file over
+  copy: src="files/eosc.log4j2.xml" dest="{{ eosc_dir }}"
+  sudo: true
+  
+- name: copy eosc.json
+  copy: src="files/eosc.json" dest="{{ eosc_dir }}"
+  sudo: true
+
+- name: Create /opt/eosc/tempfs if not exists
+  file:
+    path: "{{temp_dir}}"
+    state: directory
+    mode: '0700'
+
+### sudo mount -t tmpfs -o size=200M tmpfs /opt/eosc/tmpfs/
+- name: mount
+  mount:
+    path: "{{temp_dir}}"
+    src: tmpfs
+    fstype: tmpfs
+    opts: size=200M
+    state: present 
+  #shell: mount -t tmpfs -o size=200M tmpfs "{{ eosc_dir }}/tempfs"
+  #sudo: true
+
+### eosc resource server
+- name: copy resource server
+  get_url:
+    url: "{{ resource_server_package }}"
+    dest: "{{ eosc_dir }}/resource-server-{{ resource_server_version }}.jar"
+
+- name: templating eosc_security.properties 
+  template: 
+    src: eosc_security.properties.j2
+    dest: "{{eosc_dir}}/eosc_security.properties"
+    owner: root
+    mode: 644
+  sudo: true
+
+- name: eosc-rs template
+  template: src=eosc-rs.j2 dest="{{eosc_dir}}/eosc-rs" owner="root" mode="0755"
+  sudo: true
+
+- name: copy eosc resource systemd
+  template: 
+    src: eosc-rs.service.j2
+    dest: /lib/systemd/system/eosc-rs.service
+    owner: root
+    mode: 644
+  sudo: true
+
+- name: symlink to eosc-rs.server
+  file:
+    src: /lib/systemd/system/eosc-rs.service
+    dest: /etc/systemd/system/multi-user.target.wants/eosc-rs.service
+    owner: root
+    group: root
+    state: link
+  sudo: true
+
+- name: Make sure eosc-rs is running
+  systemd:
+    state: restarted
+    name: eosc-rs
+    daemon_reload: yes
+
+
+### group resoure server
+- name: copy group resource server
+  get_url:
+    url: "{{gr_resource_server_package}}"
+    dest: "{{eosc_dir}}/eosc-group-rs-{{gr_resource_server_version}}.jar"
+
+- name: templating eosc_grouprs_security.properties 
+  template: 
+    src: eosc_grouprs_security.properties.j2
+    dest: "{{eosc_dir}}/eosc_grouprs_security.properties"
+    owner: root
+    mode: 644
+  sudo: true
+
+- name: eosc-group-rs template
+  template: src=eosc-group-rs.j2 dest="{{eosc_dir}}/eosc-group-rs" owner="root" mode="0755"
+  sudo: true
+
+- name: copy eosc-group resource systemd
+  template: 
+    src: eosc-group-rs.service.j2
+    dest: /lib/systemd/system/eosc-group-rs.service
+    owner: root
+    mode: 644
+  sudo: true
+
+- name: symlink to eosc-group-rs.service
+  file:
+    src: /lib/systemd/system/eosc-group-rs.service
+    dest: /etc/systemd/system/multi-user.target.wants/eosc-group-rs.service
+    owner: root
+    group: root
+    state: link
+  sudo: true
+  
+- name: Make sure eosc-group-rs is running
+  systemd:
+    state: restarted
+    name: eosc-group-rs
+    daemon_reload: yes
+
+############# /var/www/html/js
+- name: Create /var/www/html/eosc-version if not exists
+  file:
+    path: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    state: directory
+    mode: '0755'
+
+    #- name: copy front-end code
+    #  unarchive:
+    #    src: "{{eosc_js_package}}"
+    #    dest: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    #    remote_src: yes
+
+- name: symlink to eosc-group-rs.service
+  file:
+    src: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    dest: /var/www/html/eosc-js
+    owner: root
+    group: root
+    state: link
+  sudo: true
+
+
+#### nginx
+- name: copy nginx ssl template over
+  template: 
+    src: nginx.ssl.j2
+    dest: /etc/nginx/sites-available/ssl
+    owner: root
+    mode: 644
+  sudo: true
+  
+
+- name: Create a symbolic link to apache tomcat
+  file:
+    src: /etc/nginx/sites-available/ssl
+    dest: /etc/nginx/sites-enabled/ssl
+    owner: root
+    group: root
+    state: link
+  sudo: true
+
+- name: Create a symbolic link to apache tomcat
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  sudo: true
+
+- name: Make sure mongodb is restarted
+  systemd:
+    state: started
+    name: mongodb
+
+- name: Make sure nginx is restarted
+  systemd:
+    state: restarted
+    name: nginx

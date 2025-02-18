@@ -1,0 +1,18 @@
+- name: "Templating /etc/ssh/known_hosts"
+  template: src=known_hosts.j2 dest=/etc/ssh/ssh_known_hosts owner=root group=root mode=644
+  sudo: true
+  register: sshknownhost
+
+- name: encrypt the hosts file
+  shell: ssh-keygen -H -f /etc/ssh/ssh_known_hosts
+  sudo: true
+  when: sshknownhost.changed
+
+- name: set read permissions
+  file: path=/etc/ssh/ssh_known_hosts owner=root group=root mode=644 state=file
+  sudo: true
+
+- name: delete ssh_known_hosts.old
+  file: path=/etc/ssh/ssh_known_hosts.old  state=absent
+  sudo: true
+

@@ -1,0 +1,12 @@
+[Unit]
+Description=guacd
+
+[Service]
+Type=forking
+ExecStart=/usr/local/sbin/guacd
+KillMode=process
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

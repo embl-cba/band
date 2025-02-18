@@ -1,0 +1,2 @@
+#!/bin/sh
+{{ singularity_bin }} exec -B /home/public_share_data:/home/public_share_data -B /home/public_share_workflow:/home/public_share_workflow {{container_dir}}/rstudio /usr/bin/Rscript "$@"

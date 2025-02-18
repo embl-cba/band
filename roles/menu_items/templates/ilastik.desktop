@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=ilastik
+Icon=/usr/share/pixmaps/ilastik.png
+Exec=/usr/bin/singularity run --nv /nfs/vd-containers/ilastik
+Categories=Image Analysis;
+MimeType=application/x-qgis-project;image/tiff;image/jpeg;image/jp2;application/x-raster-aig;application/x-mapinfo-mif;application/x-esri-shape;
+Keywords=map;globe;postgis;wms;wfs;ogc;osgeo;
+X-Desktop-File-Install-Version=0.22
+

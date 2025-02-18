@@ -1,0 +1,19 @@
+#!/bin/sh
+# specific files to be deleted to clean up after a Strudel session
+find /tmp -user ${SLURM_JOB_USER} -name "pulse*" | xargs rm -rf
+find /tmp -user ${SLURM_JOB_USER} -name ".esd-*" | xargs rm -rf
+find /tmp -user ${SLURM_JOB_USER} -name ".X*-lock" | xargs rm -rf
+find /tmp/.X11-unix -user ${SLURM_JOB_USER} -name "X*" | xargs rm -rf
+
+hashed_un=$(echo -n ${SLURM_JOB_USER} |sha256sum |cut -b 1-16)
+mount_points=$(mount |grep $hashed_un |grep s3fs|cut -d' ' -f3)
+
+if [[ ! -z "$mount_points" ]]
+then
+    for p in $(mount |grep $hashed_un |grep s3fs|cut -d' ' -f3); do
+        fusermount -uq $p
+        rm -rf $p
+        rm -f /home/$hashed_un/.passwd-s3fs
+    done
+fi
+

@@ -1,0 +1,48 @@
+---
+desktopNodeList:
+  - { name : 'DesktopNodes', interface : 'eth0' }
+clustername: "example" # YOUR CLUSTER NAME
+projectname: "exmaple" # YOUR PROJECT NAME
+
+# SLURM CONFIG, Modify accordingly
+slurm_version: 20.02.7 
+munge_version: 0.5.12
+nhc_version: 1.4.2
+munge_dir: /opt/munge-{{ munge_version }}
+slurm_dir: /opt/slurm-{{ slurm_version }}
+nhc_dir: /opt/nhc-{{ nhc_version }}
+nhc_config_file: nhc.conf
+nhc_log_level: 0
+nhc_emails: nobody@nowhere.nowhere
+nhc_email_subject: "Node Health Check"
+openmpi_version: 1.8.3
+mysql_host: "{{ groups['ManagementNodes'][0] }}"
+slurmctrl: "{{ groups['ManagementNodes'][0] }}"
+#slurmctrlbackup: "{{ groups['ManagementNodes'][1] }}"
+slurmdbd: "{{ groups['ManagementNodes'][0] }}"
+#slurmdbdbackup: "{{ groups['ManagementNodes'][1] }}"
+slurmlogin: "{{ groups['LoginNodes'][0] }}"
+slurm_use_vpn: false
+slurmqueues:
+  - {name: batch, group: default_partition, default: yes}
+  - {name: centos, group: centos_partition, default: no}
+  - {name: ubuntu, group: ubuntu_partition, default: no}
+slurmlogin: "{{ groups['LoginNodes'][0] }}"
+slurmlogdir: "{{ slurm_dir }}/var/log"
+slurmctlddebug: {level: 9, log: '/var/log/slurmctld.log'}
+slurmddebug: {level: 9, log: '/var/log/slurmd.log'}
+slurmschedlog: {level: 9, log: '/var/log/slurmsched.log'}
+slurmdbdlog: {level: 9, log: '{{ slurm_dir }}/var/log/slurmdbd.log'}
+slurmfairshare: {def: false, val: 10000}
+slurmdatadir: "{{ slurm_dir }}/var/spool"
+slurmstatedir: "{{ slurm_dir }}/var/state"
+#slurmstatedir: "/glusterVolume/slurmstate"
+slurmsharedstatedir: "/nfs/slurmstate1"
+slurmpiddir: "{{ slurm_dir }}/var/run"
+slurmaccount_create_user: "/usr/local/sbin/slurmuseraccount.sh"
+slurm_provision: "/cinderVolume/local/sbin/slurm_provision.sh"
+slurmselecttype: "select/cons_res"
+slurmfastschedule: "1"
+slurmschedulertype: "sched/backfill"
+restartServerList:
+  - slurm

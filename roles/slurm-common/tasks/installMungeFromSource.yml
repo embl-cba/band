@@ -1,0 +1,48 @@
+- name: get munge
+  #shell: wget https://munge.googlecode.com/files/munge-{{ munge_version }}.tar.bz2
+  shell: wget https://github.com/dun/munge/archive/munge-{{ munge_version }}.tar.gz
+  args:
+    chdir: /tmp
+    creates: /tmp/munge-{{ munge_version }}.tar.gz
+
+- name: untar munge
+  shell: tar xf munge-{{ munge_version }}.tar.gz
+  args:
+    chdir: /tmp
+    creates: /tmp/munge-munge-{{ munge_version }}
+
+- name: change munge-munge to munge
+  command: mv --backup=numbered /tmp/munge-munge-{{ munge_version }} /tmp/munge-{{ munge_version }}
+
+- name: build munge
+  shell: ./configure --prefix={{ munge_dir }} && make
+  args:
+    chdir: /tmp/munge-{{ munge_version }}
+    creates: /tmp/munge-{{ munge_version }}/src/munge/munge
+
+- name: install munge
+  shell: make install
+  sudo: true
+  args:
+    chdir: /tmp/munge-{{ munge_version }}
+    creates: "{{ munge_dir }}/bin/munge"
+
+- name: set use_systemd
+  set_fact:
+    use_systemd: True
+  when: (ansible_distribution == "CentOS" or ansible_distribution == "RedHat") and ( ansible_distribution_major_version == "7")
+
+- name: copy init script
+  template: dest=/etc/init.d/munge src=munge.initd.j2 mode=755
+  sudo: true
+  when: use_systemd is not defined
+
+- name:  copy slurm init script if OS contains systemd
+  template: dest=/etc/systemd/system/munge.service src=munge.service.j2 mode=755
+  sudo: true
+  when: use_systemd is defined
+
+- name: reload systemd
+  shell: systemctl daemon-reload
+  sudo: true
+  when: use_systemd is defined

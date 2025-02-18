@@ -1,0 +1,28 @@
+---
+# tasks file for java
+- name: Download Java SE 
+  shell: 'wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/{{java_major}}u{{java_minor}}-b{{java_build}}/jdk-{{java_major}}u{{java_minor}}-linux-x64.tar.gz" chdir=/opt creates=jdk-{{java_major}}u{{java_minor}}-linux-x64.tar.gz'
+
+- name: Unarchive JDK
+  shell: tar xvzf jdk-{{java_major}}u{{java_minor}}-linux-x64.tar.gz chdir=/opt creates=jdk1.{{java_major}}.0_{{java_minor}}
+
+- name: Set alternatives for java
+  alternatives: path=/opt/jdk1.{{java_major}}.0_{{java_minor}}/bin/java name=java link=/usr/bin/java
+
+- name: Set alternatives for javac
+  alternatives: path=/opt/jdk1.{{java_major}}.0_{{java_minor}}/bin/javac name=javac link=/usr/bin/javac
+
+- name: Set alternatives for jar
+  alternatives: path=/opt/jdk1.{{java_major}}.0_{{java_minor}}/bin/jar name=jar link=/usr/bin/jar
+
+- name: Set JAVA_HOME
+  lineinfile: dest=/etc/environment regexp=^JAVA_HOME line=JAVA_HOME="/opt/jdk1.{{java_major}}.0_{{java_minor}}" state=present
+
+- name: Set JRE_HOME
+  lineinfile: dest=/etc/environment regexp=^JRE_HOME line=JRE_HOME="/opt/jdk1.{{java_major}}.0_{{java_minor}}/jre" state=present
+
+- name: Set PATH
+  lineinfile: dest=~/.bash_profile regexp=^PATH line=PATH=$PATH:/opt/jdk1.{{java_major}}.0_{{java_minor}}/jre:/opt/jdk1.{{java_major}}.0_{{java_minor}} state=present
+
+- name: remove tar ball
+  file: path=/opt/jdk-{{java_major}}u{{java_minor}}-linux-x64.tar.gz state=absent

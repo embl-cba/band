@@ -1,0 +1,45 @@
+---
+- name: Installing MySQL Debian
+  apt: name={{ item  }} update_cache=yes cache_valid_time=3600 state=present
+  with_items: "{{ server_packages }}"
+  sudo: true
+  when: ansible_distribution == "Ubuntu"
+
+- name: Installing MySQL RedHat
+  yum: name={{ item }}
+  with_items: "{{server_packages}}"
+  sudo: true
+  when: ansible_distribution == "CentOS"
+
+- name: "Starting MySQL"
+  service: name={{ sqlServiceName }} state=started enabled=true
+  sudo: true
+
+- name: make sure mysql conf directory exists
+  file: dest=/etc/mysql/conf.d state=directory
+  sudo: true
+
+- name: "Adding root"
+  sudo: true
+  mysql_user: name=root host="{{ item }}" password="{{ mysql_root_password }}" login_user=root login_password="{{ mysql_root_password }}" check_implicit_admin=yes
+  with_items:
+    - "{{ ansible_hostname }}"
+    - 127.0.0.1
+    - ::1
+    - localhost
+
+- name: "Adding user database"
+  mysql_db: name={{ mysql_user_db_name }} state=present login_user=root login_password={{ mysql_root_password }} 
+
+- name: Giving priviliges to user
+  mysql_user: name={{ mysql_user_name }} host={{ mysql_user_host }} password={{ mysql_user_password }} login_user=root login_password={{ mysql_root_password }} priv={{ mysql_user_db_name }}.*:ALL state=present
+  when: mysql_user_host is defined
+
+#- debug: var=mysql_user_hosts_group
+
+#- debug: var=hostvars
+
+- name: Giving priviliges to use1
+  mysql_user: name={{ mysql_user_name }} host={{ hostvars[item].ansible_fqdn }} password={{ mysql_user_password }} login_user=root login_password={{ mysql_root_password }} priv={{ mysql_user_db_name }}.*:ALL state=present
+  with_items: "{{ mysql_user_hosts_group }}"
+  when: mysql_user_hosts_group is defined

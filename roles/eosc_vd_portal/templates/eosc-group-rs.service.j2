@@ -1,0 +1,12 @@
+[Unit]
+Description=EOSC Group Resource Server
+
+[Service]
+Type=forking
+ExecStart={{eosc_dir}}/eosc-group-rs -p {{group_resource_server_port}} -s eosc_group_security.properties
+KillMode=process
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

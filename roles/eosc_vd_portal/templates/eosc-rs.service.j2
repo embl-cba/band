@@ -1,0 +1,12 @@
+[Unit]
+Description=eosc Resource Server
+
+[Service]
+Type=forking
+ExecStart={{eosc_dir}}/eosc-rs -p {{resource_server_port}} -P HTTP/1.1  -f eosc.json -h {{login_host}} -s eosc_security.properties -t {{eosc_dir}}/tmpfs -r /kc
+KillMode=process
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

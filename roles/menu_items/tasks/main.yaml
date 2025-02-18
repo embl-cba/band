@@ -1,0 +1,44 @@
+## YAML Template.
+---
+
+- name: copy .desktop files to /usr/share/applications
+  template:
+    src:  "{{item}}.desktop"
+    dest: "/usr/share/applications/{{item}}.desktop"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+      - panoply
+      - cellprofiler
+      - fiji
+      - rstudio
+      - ilastik
+      - jupyter
+      - knime
+      - owncloud
+      - xnat-desktop
+      - qupath
+      - napari
+      - cp4
+      - chimerax
+      - dl-course
+      - dl-keras
+      - dlcgui
+      - embl-s3
+      - libre
+
+- name: copy icon images to /usr/share/pixmaps/
+  copy: src={{item}}.png dest=/usr/share/pixmaps mode=0666
+  with_items:
+      - cellprofiler
+      - fiji
+      - knime
+      - ilastik
+      - jupyter
+      - owncloud
+      - rstudio
+      - xnd
+      - panoply
+      - qupath
+      - napari

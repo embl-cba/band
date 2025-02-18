@@ -1,0 +1,66 @@
+---
+- include_vars: "{{ ansible_os_family }}.yml"
+
+#- name: Install epel-release 
+#  yum: name=epel-release-7-5.noarch state=present 
+#  sudo: true 
+#  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+
+#- name: Enable epel 
+#  command: yum-config-manager --enable epel 
+#  sudo: true
+#  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+
+- name: download latest epel-release
+  get_url:
+    url: https://download-ib01.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm
+    dest: /tmp/epel-release-7-13.noarch.rpm
+  when: ansible_distribution == "CentOS"
+  #
+- name: install epel-release
+  command: "rpm -Uvh /tmp/epel-release*rpm"
+  sudo: true
+  when: ansible_distribution == "CentOS"
+
+- name: update yum
+  yum: name=* state=latest
+  sudo: true
+  when: ansible_os_family == "RedHat"
+
+- name: install lua
+  yum: name={{ item }} state=installed
+  with_items:
+    - lua
+    - lua-filesystem
+    - lua-posix
+  sudo: true
+  when: ansible_os_family == 'RedHat'
+
+- name: install lua
+  apt: name={{ item }} state=installed
+  with_items:
+    - lua5.2
+    - lua5.2
+    - lua-filesystem
+    - lua-bitop
+    - lua-posix
+    - liblua5.2-0
+    - liblua5.2-dev
+    - tcl
+  sudo: true
+  when: ansible_os_family == 'Debian'
+
+- name: install Lmod
+  yum: 
+    name: Lmod
+    state: present
+  sudo: true
+  when: ansible_distribution == "CentOS"  
+
+- name: link bash
+  file: src=/usr/share/lmod/8.2.7/init/bash dest=/etc/profile.d/lmod.sh state=link
+  sudo: true
+
+- name: link csh
+  file: src=/usr/share/lmod/8.2.7/init/cshrc dest=/etc/profile.d/lmod.csh state=link
+  sudo: true

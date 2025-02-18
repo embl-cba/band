@@ -1,0 +1,44 @@
+---
+- name: "Copy configuration files to ldap client"
+  template: src={{ item }}.j2 dest=/etc/{{ item }}
+  with_items:
+    - pam_ldap.conf
+    - nsswitch.conf
+  sudo: true
+
+- name: "make basedir"
+  file: path="{{ ldapCaCertFile | dirname }}" state=directory owner=root
+  sudo: true
+  ignore_errors: true
+
+- name: "Copy the CA cert"
+  copy: src={{ ldapCaCertSrc }} dest={{ ldapCaCertFile }} owner=root mode=644
+  sudo: true
+  when: ldapCaCertSrc is defined
+
+- name: "Template CA cert"
+  template: src=ldapCaCert.j2 dest={{ ldapCaCertFile }} owner=root mode=644
+  sudo: true
+  when: ldapCaCertContents is defined
+
+#- name: "Copy system auth"
+#  template: src=system-auth.j2 dest=/etc/pam.d/system-auth
+#  sudo: true
+
+#- name: "Copy password auth"
+#  template: src=password-auth.j2 dest=/etc/pam.d/password-auth
+#  sudo: true
+
+- name: "Add LDAP server IP address to /etc/hosts"
+  lineinfile: dest=/etc/hosts line="{{ ldapServerHostIpLine }}" state=present insertafter=EOF
+  sudo: true
+  when: ldapServerHostIpLine is defined
+
+- name: "Copy sssd.conf to ldap client"
+  template: src=sssd.j2 dest=/etc/sssd/sssd.conf owner=root group=root mode=600
+  sudo: true
+  notify: restart sssd
+
+- name: "start sssd"
+  service: name=sssd state=started enabled=yes
+  sudo: true

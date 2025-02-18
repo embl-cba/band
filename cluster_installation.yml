@@ -1,0 +1,144 @@
+- hosts: '*'
+  tasks:
+  - include_vars: vars/passwords.yml
+  - include_vars: vars/names.yml
+  - include_vars: vars/ldapConfig.yml
+  - include_vars: vars/slurm.yml
+  - include_vars: vars/eosc-servers.yml
+
+
+- hosts: '*'
+  gather_facts: trues
+  roles:
+  - { role: setupKnownHosts }
+  - { role: apt-get-upgrade }
+  - { role: etcHosts }
+  - { role: fastest_mirror }
+
+- hosts: 'LoginNodes:DesktopNodes:ManagementNodes'
+  tasks:
+  - name: change password
+    user: name=root password=PASSWORD_HERE # ADD PASSWORD HERE
+    sudo: true
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: ntp }
+
+- hosts: 'LoginNodes:DesktopNodes'
+  user: centos
+  sudo: true
+  sudo_user: root
+  gather_facts: true
+  roles:
+  - log_config
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: ldapclient }
+  - { role: ssh-no-password-login }
+
+- hosts: "ManagementNodes:LoginNodes:DesktopNodes"
+  roles:
+  - {role: automount}
+  - {role: move_homedir}
+
+- hosts: 'LoginNodes:DesktopNodes'
+  tasks:
+  - name: put autofs to default
+    command: "sudo systemctl enable autofs"
+    sudo: true
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks:
+  - name: Make sure chronyd stopped so that /home can be deleted
+    sudo: true
+    systemd:
+      state: stopped
+      name: chronyd
+    when: ansible_distribution == 'CentOS'
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks: 
+  - name: mv old home
+    sudo: true
+    command: "mv /home /home_old"
+    ignore_errors: true
+
+  - name: mv old sbin
+    sudo: true
+    command: "mv /usr/local/sbin /usr/local/sbin_old"
+    ignore_errors: true
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: link_usr_local, source: /nfs/local/sbin, dest: /usr/local/sbin }
+  - { role: link_usr_local, source: /nfs/scratch, dest: /scratch }
+  - { role: link_usr_local, source: /nfs/home, dest: /home }
+
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks:
+  - name: Make sure chronyd stopped so that /home can be deleted
+    sudo: true
+    systemd:
+      state: started
+      name: chronyd
+    when: ansible_distribution == 'CentOS'
+# Create the sql server. I haven't altered this to allow a group of hosts
+- hosts: 'ManagementNodes'
+  gather_facts: true
+  roles:
+  - { role: mysql, mysql_type: mysql_server,  mysql_root_password: "{{ sqlrootPasswd }}", mysql_user_name: slurmdb, mysql_user_db_name: slurm_acct_db, mysql_user_hosts_group: "{{ groups['ManagementNodes'] }}", mysql_user_password: "{{ slurmdb_passwd }}" }
+
+
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: slurmdb-config }
+  tasks:
+  - { name: set use shared state, set_fact: usesharedstatedir=True }
+
+- hosts: 'LoginNodes:DesktopNodes'
+  tasks:
+  - { name: set use shared state, set_fact: usesharedstatedir=False }
+
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: slurm-common }
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: slurm-start, start_slurmdbd: True, start_slurmctld: True }
+
+- hosts: 'DesktopNodes'
+  roles:
+  - { role: slurm-start, start_slurmd: True }
+
+- hosts: 'LoginNodes'
+  roles:
+  - { role: slurm-start }
+
+# install lmod (lua modules)
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: lmod }
+
+ # - hosts: 'ManagementNodes'    
+ #  roles:
+ #  - {role: provision_account}
+
+- hosts: 'LoginNodes:DesktopNodes'
+  roles:
+  - { role: enable_lmod }
+
+- hosts: 'LoginNodes:DesktopNodes'
+  roles:
+  - { role: vncserver }
+
+- hosts: 'LoginNodes'
+  roles:
+  - {role: eosc_prepare_loginnode}
+

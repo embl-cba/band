@@ -1,0 +1,58 @@
+## YAML Template.
+---
+- name: get a list of user home folders in /nfs/home
+  sudo: true
+  shell: "cd /home;ls -d */;"
+  register: folders
+  ignore_errors: true
+
+#- name: create Desktop folder in user home directory
+#  run_once: true
+#  ignore_errors: true
+#  file: path=/nfs/home/{{item.split('/')[0]}}/Desktop state=directory owner={{item.split('/')[0]}} group=users
+#  when: item !='root/' and item !='kepler/' and item !='nssproxy/' and item !='KeplerData/' and item !='public_share_data/' and item !='public_share_workflow/' and item !='nagios/' and item !='provenance_config/'
+#  with_items:
+#      folders.stdout_lines
+#- debug: var={{item}}
+- name: copy .desktop files to user's desktop folder
+  run_once: true
+  ignore_errors: true
+  template:
+    src:  "{{item[1]}}.desktop.j2"
+    dest: "/nfs/home/{{item[0]}}Desktop/{{item[1]}}.desktop"
+    owner: "{{item[0].split('/')[0]}}"
+    mode: 0755
+  when: item[0] !='root/' and item[0] !='kepler/' and item[0] !='nssproxy/' and item[0] !='KeplerData/' and item[0] !='public_share_data/' and item[0] !='public_share_workflow/' and item[0] !='provenance_config/' and item[0] !='nagios/'
+  with_nested:
+        - folders.stdout_lines
+        - ["launcherpanoply","launcherrstudio" ,"launcherkepler"]
+
+
+#- name: copy .desktop files to user's desktop folder
+#  debug:
+#    msg: "{{item}}"
+#  with_items:
+#     - "{{folders}}.stat.stdout_lines"
+#  template:
+#    src:  "{{item[1]}}.desktop.j2"
+#    dest: "/nfs/home/{{item[0]}}/Desktop/{{item[1]}}.desktop"
+#    owner: "{{item[0]}}"
+#    mode: 0755
+#  when: item[0] !='kepler' and item[0] !='nssproxy' and item[0] !='root' and item[0].stat.isdir
+#  with_nested:
+#      - "{{folders}}.stdout_lines"
+#      - ["launcherpanoply","launcherqbrowser","launcherqgis","launcherrstudio"]
+
+
+#- name: copy .desktop files to user's desktop folder
+#  template:
+#    src:  "{{item}}.desktop.j2"
+#    dest: "/usr/share/applications/{{item}}.desktop"
+#    owner: root
+#    group: root
+#    mode: 0755
+#  with_items:
+#      - launcherpanoply
+#      - launcherqbrowser
+#      - launcherqgis
+#      - launcherrstudio

@@ -1,0 +1,33 @@
+---
+ldapServerHostIpLine: "192.168.0.xxx ldap.example.com" # CHANGE THIS
+
+# Paste your ldap ca certificate contents here
+ldapCaCertContents: #CA_CERT_CONTENT_HERE 
+
+# path to your ca cert
+ldapCaCertFile: /etc/openldap/certs/ca.cert.pem #CHANGE THIS
+ldapDomain: "example.com" # CHANGE THIS
+ldapURI: "ldaps://example.com" # CHANGE THIS 
+ldapBindDN: "cn=nssproxy,ou=users,dc=example,dc=com" #CHANGE THIS
+ldapBindDNPassword: "" # BIND DN PASSWORD
+ldapBase: "dc=example,dc=com" # CHANGE THIS
+ldapUserBase: "ou=users,dc=example,dc=com" #CHANGE THIS
+ldapGroupBase: "ou=groups,dc=exmaple,dc=com" #CHANGE THIS
+
+# Below are provided as an example, modify accordingly
+ldapRfc2307Pam: |
+  nss_base_passwd ou=users,dc=example,dc=com?one
+  nss_base_shadow ou=users,dc=example,dc=com?one
+  nss_base_group ou=groups,dc=exmaple,dc=com?one
+  pam_filter objectclass=account
+  pam_login_attribute uid
+  pam_login_attribute userPrincipalName
+  pam_template_login_attribute uid
+  pam_template_login nobody
+ldapRfc2307: |
+  ldap_search_base = dc=example,dc=com
+  ldap_user_search_base = ou=users,dc=example,dc=com
+  ldap_group_search_base = ou=groups,dc=exmaple,dc=com
+
+# ldap filter
+ldap_access_filter: "(objectClass=posixAccount)"

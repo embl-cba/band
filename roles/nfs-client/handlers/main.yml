@@ -1,0 +1,9 @@
+---
+- name: restart rpcbind
+  service: name=rpcbind state=restarted
+  sudo: true
+
+- name: restart idmap 
+  service: name=rpcidmapd state=restarted
+  sudo: true
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version < 7
