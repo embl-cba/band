@@ -16,6 +16,8 @@ https://bandv1.denbi.uni-tuebingen.de/
 ## Courses that used BAND
 |Course Name| No. of Participants  | Location | Date|
 |--|--|--|--|
+|Introduction to image segmentation with Microscopy Image Browser|10|Berlin Germany|Jan 2025|
+|Intro to BioImage Analysis with Python for Life Scientists|60|Sweden, France, Portugal|Oct 2024|
 |Power hour on AI tools and public data archive|20|Belgium|March 2024|
 |HSC Deep Learning Bioimage Analysis Course|21|European Neuroscience Institute Goettingen|Feb 2024|
 |i3S: Advanced Bioimage internal workshop|30|Portugal,Virtual|Oct 2023|	
