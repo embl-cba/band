@@ -9,7 +9,7 @@ https://bandv1.denbi.uni-tuebingen.de/
 https://band.vm.fedcloud.eu
  - Vlaams Instituut voor Biotechnologie (VIB) in Flanders, Belgium
 
-## Training materials##
+## Training materials ##
 - VIB HPC course: https://github.com/vib-bic-training/2024_Bioimaging_data_analysis_on_HPC/blob/main/Chapters/Chapter03.md
 - NEUBIAS cloud bioimage analysis: https://neubias.github.io/training-resources/cloud-based-analysis-course/index.html
 
