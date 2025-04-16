@@ -5,7 +5,13 @@
 
  - denbi Tuebingen node:
 https://bandv1.denbi.uni-tuebingen.de/
+ - Eurobioimaging service:
+https://band.vm.fedcloud.eu
  - Vlaams Instituut voor Biotechnologie (VIB) in Flanders, Belgium
+
+## Training materials##
+- VIB HPC course: https://github.com/vib-bic-training/2024_Bioimaging_data_analysis_on_HPC/blob/main/Chapters/Chapter03.md
+- NEUBIAS cloud bioimage analysis: https://neubias.github.io/training-resources/cloud-based-analysis-course/index.html
 
 ## Deploy your own BAND  ## 
   Please refer to the [WIKI page](https://git.embl.de/ysun/create-band/-/wikis/Home) for setting up BAND
