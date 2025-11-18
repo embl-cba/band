@@ -22,6 +22,13 @@ The code is partly based on https://github.com/monash-merc/ansible_cluster_in_a_
 ## Courses that used BAND
 |Course Name| No. of Participants  | Location | Date|
 |--|--|--|--|
+|Volume electron microscopy by automated serial SEM |8|23-28 Nov 2025|
+|GloBIAS Training School, Kobe Japan|52|25-29 Oct 2025|
+|FISHing for RNAs: classical to single molecule approaches |20|31 - 5 Sept 2025|
+|Hands-on workshop on: Basics of cryo-FIB miling and in situ cryo-electron tomography|8|13-17 Oct|
+|Fundamentals of Light Microscopy, South Africa |17|July 2025|
+|Mycology Bioimaging: Imaging the fungal cell, South Africa|17|July 2025|
+|An interactive introduction into the NGFF-ecosystem||7-11 April 2025|
 |Introduction to image segmentation with Microscopy Image Browser|10|Berlin Germany|Jan 2025|
 |Intro to BioImage Analysis with Python for Life Scientists|60|Sweden, France, Portugal|Oct 2024|
 |Power hour on AI tools and public data archive|20|Belgium|March 2024|
