@@ -60,3 +60,5 @@ The code is partly based on https://github.com/monash-merc/ansible_cluster_in_a_
 ## License  ## 
 [GPL](https://github.com/embl-cba/band/blob/main/LICENSE)
 
+## Acknowledgement ##
+This project is funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under the National Research Data Infrastructure – NFDI 46/1 – 501864659
