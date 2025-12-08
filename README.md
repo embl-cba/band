@@ -62,3 +62,9 @@ The code is partly based on https://github.com/monash-merc/ansible_cluster_in_a_
 
 ## Acknowledgement ##
 This project is funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under the National Research Data Infrastructure – NFDI 46/1 – 501864659
+
+## Testimonials ##
+> _"There are always course participants who do not download and set up the necessary software in advance, and catching them up consumes valuable teaching time. BAND is a game changer. Having the machines ready and set up has allowed us to get straight to teaching, and provides a more uniform experience for all participants. Knowing the computer environment ahead of time also makes it possible to prepare a much more specific and streamlined course programme"_
+
+
+> _"I've used the BAND platform for several training courses until now, and each time it's been a great experience. Having instant access to GPU-equipped virtual machines is invaluable when working with modern deep learning segmentation methods. It removes all the usual hardware barriers and lets us focus on teaching state-of-the-art approaches. The support team was excellent too, responding quickly even outside regular office hours. It's exactly the kind of infrastructure we need for effective training courses"_
