@@ -1,0 +1,9 @@
+dn: cn=config
+add: olcTLSCertificateKeyFile
+olcTLSCertificateKeyFile: /etc/pki/tls/certs/{{ hostname }}.key
+-
+add: olcTLSCertificateFile
+olcTLSCertificateFile: /etc/pki/tls/certs/{{ hostname }}.crt
+-
+add: olcTLSCACertificateFile
+olcTLSCACertificateFile: /etc/pki/tls/certs/rootca.crt

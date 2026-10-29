@@ -1,0 +1,8 @@
+---
+- name: Disable SELinux
+  hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  become: yes
+  gather_facts: yes
+  roles:
+    - disable_selinux
+

@@ -1,13 +1,23 @@
 [Unit]
 Description=Slurm node daemon
-After=network.target
+After=munge.service network-online.target remote-fs.target sssd.service nvidia-persistenced.service
+Wants=network-online.target
 ConditionPathExists={{ slurm_dir }}/etc/slurm.conf
 
+# based on the unit shipped with Slurm 25.11; Delegate=yes is required for cgroup/v2
 [Service]
-Type=forking
-#EnvironmentFile=/etc/default/slurmd
-ExecStart={{ slurm_dir }}/sbin/slurmd $SLURMD_OPTIONS
-PIDFile={{ slurmpiddir }}/slurmd.pid
+Type=notify
+EnvironmentFile=-/etc/sysconfig/slurmd
+RuntimeDirectory=slurm
+RuntimeDirectoryMode=0755
+ExecStart={{ slurm_dir }}/sbin/slurmd --systemd $SLURMD_OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+LimitNOFILE=131072
+LimitMEMLOCK=infinity
+LimitSTACK=infinity
+Delegate=yes
+TasksMax=infinity
 
 [Install]
 WantedBy=multi-user.target

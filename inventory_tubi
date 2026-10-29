@@ -1,0 +1,28 @@
+#!/bin/bash
+# addresses are in group_vars/all/site.yml (site_hosts), which is not in git
+cat <<'EOF'
+{
+  "_meta": {
+    "hostvars": {
+      "mgmt-0":      {"ansible_ssh_host": "{{ site_hosts['mgmt-0'] }}", "ansible_ssh_user": "rocky"},
+      "login-0":     {"ansible_ssh_host": "{{ site_hosts['login-0'] }}", "ansible_ssh_user": "rocky"},
+      "node-1":      {"ansible_ssh_host": "{{ site_hosts['node-1'] }}", "ansible_ssh_user": "rocky"},
+      "node-2":      {"ansible_ssh_host": "{{ site_hosts['node-2'] }}", "ansible_ssh_user": "rocky"},
+      "node-3":      {"ansible_ssh_host": "{{ site_hosts['node-3'] }}", "ansible_ssh_user": "rocky"},
+      "node-4":      {"ansible_ssh_host": "{{ site_hosts['node-4'] }}", "ansible_ssh_user": "rocky"},
+      "node-5":      {"ansible_ssh_host": "{{ site_hosts['node-5'] }}", "ansible_ssh_user": "rocky"},
+      "node-6":      {"ansible_ssh_host": "{{ site_hosts['node-6'] }}", "ansible_ssh_user": "rocky"},
+      "node-7":      {"ansible_ssh_host": "{{ site_hosts['node-7'] }}", "ansible_ssh_user": "rocky"},
+      "node-8":      {"ansible_ssh_host": "{{ site_hosts['node-8'] }}", "ansible_ssh_user": "rocky"},
+      "band-portal": {"ansible_ssh_host": "{{ site_hosts['band-portal'] }}", "ansible_ssh_user": "ubuntu"}
+    }
+  },
+  "ManagementNodes":   ["mgmt-0"],
+  "LoginNodes":        ["login-0"],
+  "PortalNodes":       ["band-portal"],
+  "DesktopNodes":      ["node-1", "node-2", "node-3", "node-4", "node-5", "node-6", "node-7", "node-8"],
+  "default_partition": ["node-1", "node-2", "node-3", "node-4", "node-5", "node-6", "node-7", "node-8"],
+  "rocky_partition":   ["node-1", "node-2", "node-3", "node-4", "node-5", "node-6", "node-7", "node-8"],
+  "ubuntu_partition":  ["band-portal"]
+}
+EOF

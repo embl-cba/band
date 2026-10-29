@@ -1,0 +1,33 @@
+- name: copy add_users_groups.ldif.j2 over
+  template: src="add_users_groups.ldif.j2" dest="/tmp/ldap/add_users_groups.ldif" mode=644
+
+- name: add users and groups specified in add_users_groups.ldif
+  command: "/usr/bin/ldapmodify -a -w {{ ldapManagerPassword }} -xZD {{ ldapManager }} -f /tmp/ldap/add_users_groups.ldif"
+  
+
+- name: copy groups.ldif.j2 over
+  template: src="groups.ldif.j2" dest="/tmp/ldap/groups.ldif" mode=644
+
+- name: add groups.ldif
+  command: "/usr/bin/ldapmodify -a -w {{ ldapManagerPassword }} -xZD {{ ldapManager }} -f /tmp/ldap/groups.ldif"
+  
+
+- name: hash password of the bind DN
+  command: /usr/sbin/slappasswd -h {SSHA} -s {{ ldapBindDNPassword }}
+  register: bindDnHash
+
+- name: hash password of the test
+  command: /usr/sbin/slappasswd -h {SSHA} -s {{ testPassword }}
+  register: testPasswordHash
+
+- name: copy users.ldif.j2 over
+  template: src="users.ldif.j2" dest="/tmp/ldap/users.ldif" mode=644
+
+- name: add users.ldif
+  command: "/usr/bin/ldapmodify -a -w {{ ldapManagerPassword }} -xZD {{ ldapManager }} -f /tmp/ldap/users.ldif"
+
+- name: copy nssproxy.acl.ldif.j2 over
+  template: src="nssproxy.acl.ldif.j2" dest="/tmp/ldap/nssproxy.acl.ldif" mode=644
+
+- name: modify acl
+  command: "/usr/bin/ldapmodify -w {{ ldapManagerPassword }} -xZD {{ ldapManager }} -f /tmp/ldap/nssproxy.acl.ldif"

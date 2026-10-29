@@ -4,20 +4,15 @@
   file: path=/etc/yum.repos.d/rdo-release.repo state=absent
 
 - name: Updates yum cache
-  yum: name=* state=latest
-#  command: yum update --skip-broken
+  dnf: name=* state=latest
 
 - name: Install some standard packages
-  yum: pkg={{item}} state=installed
+  dnf: pkg={{item}} state=installed
   with_items:
-    - gcc
     - git
     - vim
     - ant
     - unzip
     - openssl
     - openssl-devel
-    - qtwebkit
-    - python3
-#    - qgis
-#    - libreoffice-calc
+

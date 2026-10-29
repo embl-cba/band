@@ -23,5 +23,5 @@
 - name: restart the rsyslogd
   command: >
     service rsyslog restart
-  sudo: true
+  become: yes
 

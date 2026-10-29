@@ -14,17 +14,17 @@ ldap-search-filter = mail=%s
 
 # Optional LDAP settings - no auth if omitted
 ldap-security-principal = cn=admin,{{ldapBase}}
-ldap-security-password = passw0rd
+ldap-security-password = {{ldapManagerPassword}}
 
 
 # LDAP search results are cached here
 cache-file = {{eosc_dir}}/eosc-grouprs-cache.db
 cache-expiry-hours = 24
-admin-email-notify-problem = yi.sun@embl.de
-admin-email = sunyi000@gmail.com
-admin-email-password = Iynus1020#
+admin-email-notify-problem = {{ site_admin_notify_email }}
+admin-email = {{ site_admin_email }}
+admin-email-password = {{ eosc_admin_email_password }}
 #optional
-admin-email-smtp-host = smtp.gmail.com
+admin-email-smtp-host = {{ site_admin_smtp_host }}
 #optional
 admin-email-smtp-port = 465
 

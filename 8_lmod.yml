@@ -1,0 +1,6 @@
+# Step 8: Lmod (environment modules) on the login and desktop nodes.
+
+- hosts: 'LoginNodes:DesktopNodes'
+  gather_facts: true
+  roles:
+  - { role: enable_lmod }

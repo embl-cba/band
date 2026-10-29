@@ -1,0 +1,90 @@
+- name: copy create_slapdconf.sh to /tmp 
+  copy: 
+    src: "create_slapdconf.sh" 
+    dest: "/tmp/create_slapdconf.sh"
+    mode: 0755 
+    backup: "yes"
+
+- name: create /tmp/ldap/slapd
+  file: path="/tmp/ldap/slapd" state=directory mode=0755
+
+- name: create slapd top level
+  command: "/bin/sh /tmp/create_slapdconf.sh /tmp/ldap/slapd/slapd.conf.1"
+
+
+- name: hash password
+  command: /usr/sbin/slappasswd -h {SSHA} -s {{ ldapManagerPassword }}
+  register: ldapManagerHash
+
+- name: copy slapd.conf.j2 to slapd.conf.bottom
+  template:
+    src: "slapd.conf.j2"
+    dest: "/tmp/ldap/slapd/slapd.conf.2"
+    mode: 0644
+
+- name: assemble slapd.conf*
+  assemble: 
+    src: "/tmp/ldap/slapd"
+    dest: "/tmp/ldap/slapd.conf"
+    mode: 0644
+
+- name: test slapd.conf
+  command: "/usr/sbin/slaptest -uf /tmp/ldap/slapd.conf"
+  become: yes
+
+- name: generate cn=config data
+  command: "/usr/sbin/slapcat -f /tmp/ldap/slapd.conf -F /tmp/ldap -n 0"
+  become: yes
+
+- name: test generated cn=config data
+  command: "/usr/sbin/slaptest -uF /tmp/ldap"
+  become: yes
+
+
+- name: move existing slapd.d to somewhere else
+  command: "/bin/mv {{ ldapDir }}/slapd.d {{ ldapDir }}/slapd.d.unused"
+  become: yes
+
+- name: create new slapd.d
+  file: path="{{ ldapDir }}/slapd.d" owner="root" group="root" state=directory mode=0755
+  become: yes
+
+- name: move /tmp/ldap/cn=\config*
+  command: "/bin/cp -rp /tmp/ldap/{{item}} {{ ldapDir }}/slapd.d"
+  with_items: 
+    - "cn=config"
+    - "cn=config.ldif"
+  become: yes
+
+- name: change owner of slapd.d
+  file: 
+    path: "{{ ldapDir }}/slapd.d"
+    state: directory
+    owner: "{{ ldapuser }}"
+    group: "{{ ldapgroup }}"
+    mode: u=rwX
+    recurse: yes
+
+- name: fix ldap database dir perssmission
+  file: path={{ ldapDbDir }} state=directory owner={{ ldapuser }} group={{ ldapgroup }} mode=0700
+
+- name: copy ldap.j2 to /etc/sysconfig
+  template: 
+    src: "ldap.j2"
+    dest: "/etc/sysconfig/ldap"
+    owner: "root"
+    group: "root"
+    mode: 0644
+
+- name: test slapd before starting the deamon
+  command: "slaptest -u"
+  become: yes
+
+- name: copy ldap.conf.j2 
+  template:
+    src: "ldap.conf.j2"
+    dest: "{{ ldapDir }}/ldap.conf"
+    mode: 0644
+
+- name: start the slapd deamon
+  service: name=slapd state=started

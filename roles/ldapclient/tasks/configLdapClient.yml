@@ -1,44 +1,77 @@
 ---
-- name: "Copy configuration files to ldap client"
-  template: src={{ item }}.j2 dest=/etc/{{ item }}
-  with_items:
+#- name: "Copy configuration files to ldap client"
+#  template: src={{ item }}.j2 dest=/etc/{{ item }}
+#  with_items:
+#    - pam_ldap.conf
+#    - nsswitch.conf
+#  become: yes
+- name: "Copy configuration files to ldap client (older systems only)"
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/{{ item }}"
+  loop:
     - pam_ldap.conf
     - nsswitch.conf
-  sudo: true
+  become: true
+  when: not (ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] | int >= 8)
+
+- name: "Check current authselect profile (Rocky 8+)"
+  ansible.builtin.command: authselect current --raw
+  register: authselect_current
+  changed_when: false
+  failed_when: false
+  become: true
+  when: ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] | int >= 8
+
+- name: "Select authselect sssd profile (Rocky 8+)"
+  ansible.builtin.command: authselect select sssd --force
+  become: true
+  when:
+    - ansible_facts['os_family'] == 'RedHat' and ansible_facts['distribution_major_version'] | int >= 8
+    - authselect_current.stdout is not defined or not authselect_current.stdout.startswith('sssd')
+      
 
 - name: "make basedir"
   file: path="{{ ldapCaCertFile | dirname }}" state=directory owner=root
-  sudo: true
+  become: yes
   ignore_errors: true
 
 - name: "Copy the CA cert"
   copy: src={{ ldapCaCertSrc }} dest={{ ldapCaCertFile }} owner=root mode=644
-  sudo: true
+  become: yes
   when: ldapCaCertSrc is defined
 
 - name: "Template CA cert"
   template: src=ldapCaCert.j2 dest={{ ldapCaCertFile }} owner=root mode=644
-  sudo: true
+  become: yes
   when: ldapCaCertContents is defined
 
 #- name: "Copy system auth"
 #  template: src=system-auth.j2 dest=/etc/pam.d/system-auth
-#  sudo: true
+#  become: yes
 
 #- name: "Copy password auth"
 #  template: src=password-auth.j2 dest=/etc/pam.d/password-auth
-#  sudo: true
+#  become: yes
 
 - name: "Add LDAP server IP address to /etc/hosts"
-  lineinfile: dest=/etc/hosts line="{{ ldapServerHostIpLine }}" state=present insertafter=EOF
-  sudo: true
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '\s{{ ldapServerHostIpLine.split()[1] | regex_escape }}(\s|$)'
+    line: "{{ ldapServerHostIpLine }}"
+    state: present
+  become: true
   when: ldapServerHostIpLine is defined
+
+#  lineinfile: dest=/etc/hosts line="{{ ldapServerHostIpLine }}" state=present insertafter=EOF
+#  become: yes
+#  when: ldapServerHostIpLine is defined
 
 - name: "Copy sssd.conf to ldap client"
   template: src=sssd.j2 dest=/etc/sssd/sssd.conf owner=root group=root mode=600
-  sudo: true
+  become: yes
   notify: restart sssd
 
 - name: "start sssd"
   service: name=sssd state=started enabled=yes
-  sudo: true
+  become: yes

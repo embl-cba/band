@@ -1,31 +1,31 @@
 ---
 - name: create munge group
   group: name=munge system=yes gid=498
-  sudo: true
+  become: yes
 
 - name: create munge user
   user: name=munge group=munge system=yes createhome=no uid=498
-  sudo: true
+  become: yes
 
 - name: create slurm group
   group: name=slurm system=yes gid=497
-  sudo: true
+  become: yes
 
 - name: create slurm user
   user: name=slurm group=slurm system=yes createhome=no uid=497
-  sudo: true
+  become: yes
 
 - name: make sure slurm conf dir exists
   file: dest={{ slurm_dir }}/etc state=directory
-  sudo: true
+  become: yes
 
 - name: make sure slurm lock dir exists
   file: dest=/var/lock/subsys state=directory owner=root group=root mode=755
-  sudo: true
+  become: yes
 
 - name: create data directory
   file: path={{ slurmdatadir }} state=directory owner=slurm group=slurm mode=755
-  sudo: true
+  become: yes
   when: slurmdatadir is defined 
       
 - name: stat run directory
@@ -33,35 +33,36 @@
   register: runstat
   when: slurmpiddir is defined
 
+# slurmctld runs as SlurmUser and writes its pid file here
 - name: create run directory
-  file: path={{ slurmpiddir }} state=directory owner=root group=root mode=750
-  sudo: true
-  when: slurmpiddir is defined and not runstat.stat.exists
+  file: path={{ slurmpiddir }} state=directory owner=slurm group=slurm mode=755
+  become: yes
+  when: slurmpiddir is defined
 
 - name: create shared state directory
   file: path={{slurmsharedstatedir }} state=directory owner=slurm group=slurm mode=750
-  sudo: true
+  become: yes
   run_once: true
   when: usesharedstatedir
 
 - name: symlink shared state dir
   file: path={{ slurmstatedir }} src={{ slurmsharedstatedir }} state=link force=yes
-  sudo: true
+  become: yes
   when: usesharedstatedir
 
 - name: create state directory
   file: path={{ slurmstatedir }} state=directory owner=slurm group=slurm mode=750
-  sudo: true
+  become: yes
   when: slurmstatedir is defined  and not usesharedstatedir
 
 - name: create log directory
   file: path={{ slurmlogdir }} state=directory owner=slurm group=slurm mode=750
-  sudo: true
+  become: yes
   when: slurmlogdir is defined 
 
 # - name: create greps directory
 #   file: path={{ slurm_dir }}/etc/gres state=directory owner=slurm group=slurm mode=755
-#   sudo: true
+#   become: yes
 
 - name: install deps
   yum: name={{ item }} state=present
@@ -72,21 +73,22 @@
     - gcc
     - rpm-build
     - wget
-    - openssl-devel
     - readline-devel
     - pam-devel
     - perl-ExtUtils-MakeMaker
     - bzip2-devel
     - hwloc
-    - hwloc-devel
+    - hwloc-libs
     - lua
-    - lua-devel
-  sudo: true
-  when: ansible_distribution == 'CentOS'
+    - make
+    - bzip2
+    - xz
+  become: yes
+  when: ansible_distribution == 'Rocky'
 
 - name: install deps
   apt: name={{ item }} state=installed update_cache=yes
-  sudo: true
+  become: yes
   with_items:
     - gcc
     - wget
@@ -101,68 +103,77 @@
     - libhwloc-dev
   when: ansible_distribution == 'Ubuntu'
 
-- include: installMungeFromSource.yml
+- include_tasks: installMungeFromSource.yml
 
 - name: chown mungedir
   file: path={{ munge_dir }} state=directory owner=munge recurse=yes
-  sudo: true
+  become: yes
 
 - name: make munge logdir
   file: path={{ munge_dir }}/var/log/munge state=directory owner=munge mode=700
-  sudo: true
+  become: yes
+
+# munged 0.5.15+ needs its socket dir to exist; make install does not create it
+- name: make munge socket dir
+  file: path={{ munge_dir }}/var/run/munge state=directory owner=munge mode=755
+  become: yes
 
 - name: install munge key
   template: src=munge_key.j2 dest={{ munge_dir }}/etc/munge/munge.key owner=munge mode=600
-  sudo: true
+  become: yes
 
 - name: enable munge on boot
   systemd:
     name: munge
     enabled: yes
-  sudo: true
+  become: yes
 
 - name: now enable munge
   service: name=munge enabled=yes
-  sudo: true
+  become: yes
 
 
-- include: installSlurmFromSource.yml
+- include_tasks: installSlurmFromSource.yml
 
 
 - name: install gres config file 
   template: src=gres.conf.j2 dest={{ slurm_dir }}/etc/gres.conf mode=644
-  sudo: true
+  become: yes
 
 
 - name: install slurm prolog
   template: src=slurm.prolog.j2 dest={{ slurm_dir }}/bin/slurm.prolog mode=755
-  sudo: true
+  become: yes
 
 - name: install slurm epilog
   template: src=slurm.epilog.j2 dest={{ slurm_dir }}/bin/slurm.epilog mode=755
-  sudo: true
+  become: yes
 
 - name: install slurm.conf
   copy: src=files/slurm.conf dest={{ slurm_dir }}/etc/slurm.conf
-  sudo: true
+  become: yes
   when: slurm_use_vpn==False 
 
 - name: install slurm.conf
   template: src=slurm-vpn.conf.j2 dest={{ slurm_dir }}/etc/slurm.conf
-  sudo: true
+  become: yes
   when: slurm_use_vpn==True
 
 - name: setup envirnment variables 
   template: src=slurm_setup.sh.j2 dest=/etc/profile.d/slurm_setup.sh
-  sudo: true
+  become: yes
+
+- name: rotate the slurmctld/slurmd logs
+  template: src=slurmlog.j2 dest=/etc/logrotate.d/slurm mode=644
+  become: yes
 
 - name: setup plugin
   template: src=job_submit.lua.j2 dest={{ slurm_dir }}/etc/job_submit.lua mode=755
   delegate_to: "{{ slurmctrl }}"
   run_once: true
-  sudo: true
+  become: yes
   when: slurm_lua is defined
 
-- include: installCgroup.yml
-- include: installNhc.yml
+- include_tasks: installCgroup.yml
+- include_tasks: installNhc.yml
 

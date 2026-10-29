@@ -1,0 +1,3 @@
+---
+deploy_script_dest: /opt/s3
+deploy_script_name: mount-s3.py

@@ -3,7 +3,7 @@
 
 - name: copy ca cert
   copy: src=server_ca.pub dest=/etc/ssh/server_ca.pub owner=root group=root mode=644
-  sudo: true
+  become: yes
 
 - name: edit sshd_config
   lineinfile:
@@ -11,5 +11,5 @@
     dest: /etc/ssh/sshd_config
     line: TrustedUserCAKeys /etc/ssh/server_ca.pub
     state: present
-  sudo: true
+  become: yes
   notify: restart ssh

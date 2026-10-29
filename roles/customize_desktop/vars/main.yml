@@ -1,0 +1,44 @@
+wallpaper_image: "embl-ic.jpg"
+gnome_apps:
+  - icon: cellprofiler.png
+  - icon: cp425.png
+  - icon: chimerax.png
+  - icon: fiji.png
+  - icon: ilastik.png
+  - icon: jupyter.png
+  - icon: knime.png
+  - icon: libre.png
+  - icon: napari.png
+  - icon: owncloud.png
+  - icon: panoply.png
+  - icon: qupath.png
+  - icon: rstudio.png
+  - icon: xnd.png
+  - icon: cellpose.png
+  - icon: plantseg.png
+  - icon: tissuumaps.png
+  - icon: aspera.png
+  - icon: omero.png
+  - icon: dlc.png
+
+gnome_desktop_files:
+  - desktop_base: cellprofiler
+  - desktop_base: chimerax
+  - desktop_base: fiji
+  - desktop_base: ilastik
+  - desktop_base: jupyter
+  - desktop_base: knime
+  - desktop_base: libre
+  - desktop_base: napari
+  - desktop_base: owncloud
+  - desktop_base: panoply
+  - desktop_base: qupath
+  - desktop_base: rstudio
+  - desktop_base: xnd
+  - desktop_base: cellpose
+  - desktop_base: plantseg
+  - desktop_base: tissuumaps
+  - desktop_base: aspera
+  - desktop_base: omero
+  - desktop_base: cp425
+  - desktop_base: dlc

@@ -1,0 +1,12 @@
+# mariadb-devel is in CRB on Rocky 9; the connector-c headers are in AppStream
+server_packages:
+  - python3-PyMySQL
+  - mariadb-server
+  - mariadb-connector-c-devel
+
+client_packages:
+  - mariadb
+  - python3-PyMySQL
+  - mariadb-connector-c-devel
+sqlServiceName: mariadb
+mysql_socket: /var/lib/mysql/mysql.sock

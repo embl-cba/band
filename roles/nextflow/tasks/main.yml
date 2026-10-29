@@ -1,0 +1,25 @@
+---
+- name: Ensure Nextflow install directory exists
+  file:
+    path: "{{ nextflow_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Download official Nextflow wrapper script
+  get_url:
+    url: "{{ nextflow_wrapper_url }}"
+    dest: "{{ nextflow_bin_path }}"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Install environment configuration script
+  copy:
+    src: nf.sh
+    dest: /etc/profile.d/nf.sh
+    mode: '0644'
+    owner: root
+    group: root
+

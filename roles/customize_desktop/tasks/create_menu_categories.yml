@@ -1,0 +1,36 @@
+---
+- name: Ensure required system directories exist
+  become: yes
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /usr/share/desktop-directories
+    - /etc/xdg/menus/applications-merged
+
+- name: Copy 'Data Access' directory file
+  become: yes
+  copy:
+    src: data-access.directory
+    dest: /usr/share/desktop-directories/data-access.directory
+    mode: '0644'
+
+- name: Copy 'Image Analysis' directory file
+  become: yes
+  copy:
+    src: image-analysis.directory
+    dest: /usr/share/desktop-directories/image-analysis.directory
+    mode: '0644'
+
+- name: Copy custom menu layout file
+  become: yes
+  copy:
+    src: gnome-config.menu
+    dest: /etc/xdg/menus/applications-merged/gnome-config.menu
+    mode: '0644'
+
+- name: Update dconf database
+  command: dconf update
+  become: yes
+

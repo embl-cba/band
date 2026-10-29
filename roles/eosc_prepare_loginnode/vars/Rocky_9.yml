@@ -1,0 +1,9 @@
+## YAML Template.
+###################
+---
+# python3-mysqlclient (MySQLdb, used by provision_account) is only in EPEL on Rocky 9
+login_packages:
+  - openldap-devel
+  - python3-devel
+  - python3-ldap
+  - python3-mysqlclient

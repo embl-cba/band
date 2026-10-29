@@ -1,0 +1,13 @@
+---
+- name: Ensure EPEL repository is enabled
+  become: yes
+  dnf:
+    name: epel-release
+    state: present
+
+- name: Install s3fs and dependencies
+  become: yes
+  dnf:
+    name:
+      - s3fs-fuse
+    state: present

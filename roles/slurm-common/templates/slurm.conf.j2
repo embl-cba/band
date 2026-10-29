@@ -9,7 +9,7 @@
 # See the slurm.conf man page for more information.
 #
 ClusterName={{ clustername }}
-ControlMachine={{ slurmctrl }}
+SlurmctldHost={{ slurmctrl }}
 #ControlAddr=
 #BackupController=
 #BackupAddr=
@@ -71,7 +71,7 @@ SchedulerType={{ slurmschedulertype }}
 #SchedulerPort=
 #SchedulerRootFilter=
 SelectType={{ slurmselecttype }}
-{% if slurmselecttype.find("cons_res") > 0 %}
+{% if slurmselecttype.find("cons_") > 0 %}
 SelectTypeParameters=CR_Core_Memory
 {% endif %}
 FastSchedule={{ slurmfastschedule }}

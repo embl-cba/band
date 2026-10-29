@@ -1,0 +1,5 @@
+---
+nextflow_install_dir: "/opt/nf"
+nextflow_bin_path: "/opt/nf/nextflow"
+nextflow_wrapper_url: "https://get.nextflow.io"
+

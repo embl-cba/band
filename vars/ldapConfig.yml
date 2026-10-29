@@ -1,33 +1,67 @@
 ---
-ldapServerHostIpLine: "192.168.0.xxx ldap.example.com" # CHANGE THIS
+# the LDAP server has no DNS record; its /etc/hosts line comes from files/etcHosts.
+# Set ldapServerHostIpLine: "<ip> <ldap host> <short name>" to have
+# ldapclient add it instead.
 
-# Paste your ldap ca certificate contents here
-ldapCaCertContents: #CA_CERT_CONTENT_HERE 
+ldapCaCertContents: |
+ -----BEGIN CERTIFICATE-----
+ MIID1zCCAr+gAwIBAgIJAIy4XUrDKsARMA0GCSqGSIb3DQEBCwUAMIGBMQswCQYD
+ VQQGEwJERTELMAkGA1UECAwCQlcxCzAJBgNVBAcMAkhEMQ0wCwYDVQQKDARFTUJM
+ MQwwCgYDVQQLDANDQkIxHjAcBgNVBAMMFWxkYXAtZGV2LmVvc2MtbGlmZS5ldTEb
+ MBkGCSqGSIb3DQEJARYMeXN1bkBlbWJsLmRlMB4XDTI0MDUxNDEzNDQ1N1oXDTM0
+ MDUxMjEzNDQ1N1owgYExCzAJBgNVBAYTAkRFMQswCQYDVQQIDAJCVzELMAkGA1UE
+ BwwCSEQxDTALBgNVBAoMBEVNQkwxDDAKBgNVBAsMA0NCQjEeMBwGA1UEAwwVbGRh
+ cC1kZXYuZW9zYy1saWZlLmV1MRswGQYJKoZIhvcNAQkBFgx5c3VuQGVtYmwuZGUw
+ ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDF1LZkrufA0ujvdkW+fw+K
+ KJTgRzDnmMkbRuoZKM9sxi681hxN2cJbEnTBn0ptMiunsuPfGOazX8Rt8c4saLWs
+ G7PmkNdy+99Mgyj4MbdEA8F63QkvZLFrDVdX2eP1k0g87mKVmtysPnoTfj0D7m67
+ Wp0dym5yfhuoizr1G1fkAdfwiwdIKipuc633Ol9AmjjjQQBNAPouy46oNwyJOoLg
+ njGCKDmu8eipxCHr5GX+554zjofnT8Xf+ltH3yiAQITypImZVoAuvjyIS80G5FYs
+ pe4hsoaL4J8PltcBnuvARTWzPk2dQXtpGZagEAEtJe1BpVQDvMwWigsMnnwE6nWx
+ AgMBAAGjUDBOMB0GA1UdDgQWBBQNM3tTRs+80o1CeHGQdwOJcda1NzAfBgNVHSME
+ GDAWgBQNM3tTRs+80o1CeHGQdwOJcda1NzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3
+ DQEBCwUAA4IBAQCxZAO87aqOm4LGVY2gocd3+PyrMQrwhWGmzTiKm0mLXuzrAcY+
+ C41xnlyqKOlPn+OKANmYltJ1OjjamPI7gcEUvQth4onvJKYzFkd41NMvONVUHSQd
+ Be3Xy7uGNDcoyhDcnHhZGO54cmhgXe4qa/WeHTunZ4X9utksIxQeq+tSGnryqVh6
+ 0tMgRbMcdq8HqZTWl70A4bXlvPVka0bDzf/I4CxKnd9tplkG/8ByNUYOPbPUaFAG
+ jI9tl+UcC/nEF+Y8fVwSMmCAfX3RLAQMp69feTUtmksWgUUebu8XXZazgnwjCDfp
+ PNYySlFfXFlOZ+G0ygBZLF2ApyRI9lTMahJI
+ -----END CERTIFICATE-----
 
-# path to your ca cert
-ldapCaCertFile: /etc/openldap/certs/ca.cert.pem #CHANGE THIS
-ldapDomain: "example.com" # CHANGE THIS
-ldapURI: "ldaps://example.com" # CHANGE THIS 
-ldapBindDN: "cn=nssproxy,ou=users,dc=example,dc=com" #CHANGE THIS
-ldapBindDNPassword: "" # BIND DN PASSWORD
-ldapBase: "dc=example,dc=com" # CHANGE THIS
-ldapUserBase: "ou=users,dc=example,dc=com" #CHANGE THIS
-ldapGroupBase: "ou=groups,dc=exmaple,dc=com" #CHANGE THIS
-
-# Below are provided as an example, modify accordingly
+ldapCaCertFile: /etc/openldap/certs/ca.crt
+ldapDomain: eosc-life.eu
+ldapURI: "ldaps://{{ site_ldap_host }}"
+ldapBindDN: "cn=nssproxy,ou=users,dc=eosc-life,dc=eu"
+ldapBindDNPassword: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          37343364373431333336313966626335663038303338333637333937393934663963613964633364
+          6463326539356464396434333233396463623430306264640a663638306333646138663362343234
+          39346236316239313533386237326466626362626161363464313230613362636134343463636265
+          6337363961613939380a343239356434383639626533643263616138633064666362623234633764
+          6633
+ldapBase: "dc=eosc-life,dc=eu"
+ldapUserBase: "ou=users,dc=eosc-life,dc=eu"
+ldapGroupBase: "ou=groups,dc=eosc-life,dc=eu"
 ldapRfc2307Pam: |
-  nss_base_passwd ou=users,dc=example,dc=com?one
-  nss_base_shadow ou=users,dc=example,dc=com?one
-  nss_base_group ou=groups,dc=exmaple,dc=com?one
+  nss_base_passwd ou=users,dc=eosc-life,dc=eu?one
+  nss_base_shadow ou=users,dc=eosc-life,dc=eu?one
+  nss_base_group ou=groups,dc=eosc-life,dc=eu?one
   pam_filter objectclass=account
   pam_login_attribute uid
   pam_login_attribute userPrincipalName
   pam_template_login_attribute uid
   pam_template_login nobody
 ldapRfc2307: |
-  ldap_search_base = dc=example,dc=com
-  ldap_user_search_base = ou=users,dc=example,dc=com
-  ldap_group_search_base = ou=groups,dc=exmaple,dc=com
-
-# ldap filter
+  ldap_search_base = dc=eosc-life,dc=eu
+  ldap_user_search_base = ou=users,dc=eosc-life,dc=eu
+  ldap_group_search_base = ou=groups,dc=eosc-life,dc=eu
 ldap_access_filter: "(objectClass=posixAccount)"
+
+# must match ldapManagerPassword in roles/eosc_ldapserver/vars/main.yml
+ldapManagerPassword: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          64646538666265386635373233376639323962623465343037333463373636333666396438633062
+          6633333735313630353435316466386435366365363064340a633264353038336131323162356565
+          38646335623464383034633163656532306637326663623337366236656137623262383634343532
+          6332326336636365330a306566383032326430616136643861623565353861613363373430396166
+          3063

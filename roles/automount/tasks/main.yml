@@ -1,38 +1,40 @@
 ---
 - include_vars: nfs.yml
 
-- include: yumPackages.yml
-  when: ansible_distribution == 'CentOS'
+- include_tasks: yumPackages.yml
+  when: ansible_distribution == 'Rocky'
 
-- include: aptPackages.yml
+- include_tasks: aptPackages.yml
   when: ansible_distribution == 'Ubuntu'
 
 - name: install autofs if redhat
   yum: name="autofs" state=installed
-  sudo: true
-  when: ansible_distribution == 'CentOS'
+  become: yes
+  when: ansible_distribution == 'Rocky'
 
 - name: install autofs if debian
   apt: name="autofs" state=installed
-  sudo: true
+  become: yes
   when: ansible_distribution == 'Ubuntu'
 
 - name: make /nfs
   file: path="/nfs" state=directory
-  sudo: true
+  become: yes
 
 - lineinfile: dest=/etc/auto.master line="/- file:/etc/auto.eosc"
-  sudo: true
+  become: yes
 
 - name: add auto.eosc
-  sudo: true
+  become: yes
   template:
     src: auto.eosc.j2
     dest: "/etc/auto.eosc"
     owner: root
     group: root
     mode: 0644
+  notify: reload autofs
 
-- name: bring up autofs 
-  sudo: yes
-  service: name=autofs  state=restarted
+# no restart: /home is on these mounts; a reload picks up map changes
+- name: bring up autofs
+  become: yes
+  service: name=autofs state=started enabled=yes

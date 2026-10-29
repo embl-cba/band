@@ -1,19 +1,41 @@
-#!/bin/sh
-# specific files to be deleted to clean up after a Strudel session
-find /tmp -user ${SLURM_JOB_USER} -name "pulse*" | xargs rm -rf
-find /tmp -user ${SLURM_JOB_USER} -name ".esd-*" | xargs rm -rf
-find /tmp -user ${SLURM_JOB_USER} -name ".X*-lock" | xargs rm -rf
-find /tmp/.X11-unix -user ${SLURM_JOB_USER} -name "X*" | xargs rm -rf
+#!/bin/bash
+# Runs as root on the node after every job. Cleans up after a desktop session:
+# unmounts the user's s3fs buckets and removes what VNC/X/pulseaudio leave in
+# /tmp, but only once the user has no other job on this node (those may still
+# be using them). Must always exit 0: a failing epilog drains the node.
+user=$SLURM_JOB_USER
+uid=$(id -u "$user" 2>/dev/null) || exit 0
 
-hashed_un=$(echo -n ${SLURM_JOB_USER} |sha256sum |cut -b 1-16)
-mount_points=$(mount |grep $hashed_un |grep s3fs|cut -d' ' -f3)
+# the user's other jobs, on this node and anywhere; if slurmctld can't be
+# asked, leave everything alone
+squeue={{ slurm_dir }}/bin/squeue
+here=$($squeue -h -u "$user" -w "$SLURMD_NODENAME" -o %A 2>/dev/null) || exit 0
+anywhere=$($squeue -h -u "$user" -o %A 2>/dev/null) || exit 0
+here=$(echo "$here" | grep -vx -e "$SLURM_JOB_ID" -e '')
+anywhere=$(echo "$anywhere" | grep -vx -e "$SLURM_JOB_ID" -e '')
+[ -z "$here" ] || exit 0
 
-if [[ ! -z "$mount_points" ]]
-then
-    for p in $(mount |grep $hashed_un |grep s3fs|cut -d' ' -f3); do
-        fusermount -uq $p
-        rm -rf $p
-        rm -f /home/$hashed_un/.passwd-s3fs
-    done
+# s3fs mounts are FUSE mounts tagged with the owner's uid; match that exactly
+findmnt -rn -t fuse.s3fs -o TARGET,OPTIONS | while read -r target opts; do
+    case ",$opts," in
+        *,user_id=$uid,*) ;;
+        *) continue ;;
+    esac
+    target=$(printf '%b' "$target")    # findmnt -r escapes spaces as \x20
+    umount -- "$target" 2>/dev/null || umount -l -- "$target"
+    # only an empty mount point is removed, never the bucket's contents
+    rmdir -- "$target" 2>/dev/null
+done
+
+# the keys file in the (shared) home goes once the user has no job anywhere
+if [ -z "$anywhere" ]; then
+    home=$(getent passwd "$user" | cut -d: -f6)
+    [ -n "$home" ] && [ -f "$home/.passwd-s3fs" ] && [ ! -L "$home/.passwd-s3fs" ] \
+        && rm -f -- "$home/.passwd-s3fs"
 fi
 
+# 2>/dev/null: root can't stat other users' FUSE mounts in /tmp
+find /tmp -maxdepth 1 -user "$user" \
+     \( -name 'pulse*' -o -name '.esd-*' -o -name '.X*-lock' \) -exec rm -rf -- {} + 2>/dev/null
+find /tmp/.X11-unix -maxdepth 1 -user "$user" -name 'X*' -exec rm -f -- {} + 2>/dev/null
+exit 0

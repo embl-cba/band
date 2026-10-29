@@ -1,39 +1,33 @@
+# portal-side packages on the login node (python ldap/mysql bindings)
+- hosts: 'LoginNodes'
+  roles:
+  - {role: eosc_prepare_loginnode}
+
 - hosts: '*'
   tasks:
   - include_vars: vars/eosc-servers.yml
 
+#### system tools
 
-- hosts: 'DesktopNodes:CPUNodes'
+- hosts: 'DesktopNodes'
   tasks:
-  - name: system tools
-    apt: name={{ item }} state=installed
-    with_items:
-    - default-jdk-headless
-    - singularity
-    - firefox
-    sudo: true
-    when: ansible_os_family == "Debian"
   - name: system tools
     yum: name={{ item }} state=installed
     with_items:
     - java-latest-openjdk-headless.x86_64
     - singularity.x86_64
     - firefox.x86_64
-    sudo: true
+    become: yes
     when: ansible_os_family == "RedHat"
   
   
 
-- hosts: 'DesktopNodes:CPUNodes'
-  user: centos
-  sudo: true
-  sudo_user: root
+- hosts: 'DesktopNodes'
+  user: rocky
+  become: yes
   gather_facts: true
   roles:
-  - { role: common }
-  - { role: disable_screensaver }
-  - { role: menu_category }
-  - { role: menu_items }
-  - { role: desktop_background }
-  - { role: singularity_tools }
+    - { role: common }
+    # GNOME/metacity desktop (dconf): screensaver, logout, menus, launchers, background
+    - { role: customize_desktop }
 

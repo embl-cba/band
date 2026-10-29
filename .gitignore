@@ -1,0 +1,14 @@
+# ansible run leftovers
+*.retry
+__pycache__/
+*.pyc
+# editor files
+*.swp
+*~
+# never commit a vault password or a decrypted copy
+*vault_pass*
+*.decrypted
+# site-specific values (addresses, host names, e-mail, Keycloak); templates
+# are site.example.yml and files/etcHosts.example
+/group_vars/all/site.yml
+/files/etcHosts

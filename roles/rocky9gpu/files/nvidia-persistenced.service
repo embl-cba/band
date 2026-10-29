@@ -1,0 +1,14 @@
+# keeps the driver loaded and creates /dev/nvidia* at boot, before slurmd checks gres.conf
+[Unit]
+Description=NVIDIA Persistence Daemon
+Before=slurmd.service
+
+[Service]
+Type=forking
+# fail fast instead of holding up boot if the GPU does not initialise
+TimeoutStartSec=60
+ExecStart=/usr/bin/nvidia-persistenced --verbose
+ExecStopPost=/bin/rm -rf /var/run/nvidia-persistenced
+
+[Install]
+WantedBy=multi-user.target

@@ -1,12 +1,10 @@
 ---
 desktopNodeList:
   - { name : 'DesktopNodes', interface : 'eth0' }
-clustername: "example" # YOUR CLUSTER NAME
-projectname: "exmaple" # YOUR PROJECT NAME
-
-# SLURM CONFIG, Modify accordingly
-slurm_version: 20.02.7 
-munge_version: 0.5.12
+clustername: "mbp"
+projectname: "band"
+slurm_version: 25.11.4
+munge_version: 0.5.18
 nhc_version: 1.4.2
 munge_dir: /opt/munge-{{ munge_version }}
 slurm_dir: /opt/slurm-{{ slurm_version }}
@@ -25,23 +23,24 @@ slurmlogin: "{{ groups['LoginNodes'][0] }}"
 slurm_use_vpn: false
 slurmqueues:
   - {name: batch, group: default_partition, default: yes}
-  - {name: centos, group: centos_partition, default: no}
-  - {name: ubuntu, group: ubuntu_partition, default: no}
+  - {name: rocky, group: rocky_partition, default: no}
+#  - {name: ubuntu, group: ubuntu_partition, default: no}
 slurmlogin: "{{ groups['LoginNodes'][0] }}"
 slurmlogdir: "{{ slurm_dir }}/var/log"
-slurmctlddebug: {level: 9, log: '/var/log/slurmctld.log'}
-slurmddebug: {level: 9, log: '/var/log/slurmd.log'}
-slurmschedlog: {level: 9, log: '/var/log/slurmsched.log'}
-slurmdbdlog: {level: 9, log: '{{ slurm_dir }}/var/log/slurmdbd.log'}
+slurmctlddebug: {level: info, log: '/var/log/slurmctld.log'}
+slurmddebug: {level: info, log: '/var/log/slurmd.log'}
+slurmschedlog: {level: 0, log: '/var/log/slurmsched.log'}
+slurmdbdlog: {level: info, log: '{{ slurm_dir }}/var/log/slurmdbd.log'}
 slurmfairshare: {def: false, val: 10000}
 slurmdatadir: "{{ slurm_dir }}/var/spool"
 slurmstatedir: "{{ slurm_dir }}/var/state"
 #slurmstatedir: "/glusterVolume/slurmstate"
+# unused while usesharedstatedir=False; slurmstate1 holds an old cluster's state
 slurmsharedstatedir: "/nfs/slurmstate1"
 slurmpiddir: "{{ slurm_dir }}/var/run"
 slurmaccount_create_user: "/usr/local/sbin/slurmuseraccount.sh"
 slurm_provision: "/cinderVolume/local/sbin/slurm_provision.sh"
-slurmselecttype: "select/cons_res"
+slurmselecttype: "select/cons_tres"
 slurmfastschedule: "1"
 slurmschedulertype: "sched/backfill"
 restartServerList:

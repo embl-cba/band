@@ -1,0 +1,9 @@
+- name: "restart sshd"
+  service: name=sshd state=restarted
+  become: yes
+  when: ansible_distribution == 'Rocky'
+
+- name: "restart ssh"
+  service: name=ssh state=restarted
+  become: yes
+  when: ansible_distribution == 'Ubuntu'

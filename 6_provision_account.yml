@@ -1,0 +1,13 @@
+# Step 6: home directories and Slurm users for every LDAP user. Installs
+# /usr/local/sbin/provision_account.py (on the NFS share) and a cron job on
+# login-0.
+
+- hosts: 'LoginNodes'
+  tasks:
+  - include_vars: vars/passwords.yml
+  - include_vars: vars/ldapConfig.yml
+  - include_vars: vars/slurm.yml
+
+- hosts: 'LoginNodes'
+  roles:
+  - {role: provision_account, provision_send_email: True}

@@ -22,15 +22,15 @@ for group in d['groups'].keys():
         hosts[h] = ['%s.%s %s'%(h,domain,h)]
 
 for h in hosts.keys():
-    if d['hostvars'].has_key(h):
+    if h in d['hostvars']:
         string="%s"%(d['hostvars'][h]['ansible_eth0']['ipv4']['address'])
         for name in hosts[h]:
             string=string+" %s"%(name)
-        print string
+        print (string)
 
 for h in hosts.keys():
-    if d['hostvars'].has_key(h):
-        if d['hostvars'][h].has_key('ansible_tun0'):
+    if h in d['hostvars']:
+        if 'ansible_tun0' in d['hostvars'][h]:
             string="%s"%(d['hostvars'][h]['ansible_tun0']['ipv4']['address'])
             string=string+" %s-vpn"%h
-            print string
+            print (string)

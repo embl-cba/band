@@ -1,0 +1,9 @@
+## YAML Template.
+###################
+---
+login_packages:
+  - openldap-devel
+  - python36-devel.x86_64
+  - python3-ldap.x86_64
+  - python3-mysqlclient.x86_64
+

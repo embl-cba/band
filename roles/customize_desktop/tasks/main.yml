@@ -1,0 +1,15 @@
+---
+- name: Include task to disable scree saver
+  include_tasks: disable_screensaver.yml
+
+- name: Include task to disable logout
+  include_tasks: disable_logout.yml
+
+- name: Include menu category setup
+  include_tasks: create_menu_categories.yml
+
+- name: Include desktop entires
+  include_tasks: create_desktop_entries.yml
+
+- name: change desktop background
+  include_tasks: set_background.yml

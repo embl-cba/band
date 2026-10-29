@@ -1,0 +1,148 @@
+#!/usr/bin/env python
+import sys
+import os
+import re
+import json
+
+from novaclient import client as nvclient
+from cinderclient import client as cdclient
+import keystoneclient.v3.client as ksclient
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
+
+from joblib import Parallel, delayed
+
+
+def gatherInfo(
+        projectName,
+        inventory,
+        nc,
+        cc
+):
+
+    for server in nc.servers.list():
+        if server.metadata and 'ansible_host_groups' in server.metadata \
+                and 'project_name' in server.metadata:
+            if server.metadata['project_name'].strip() \
+                    != projectName.strip():
+                continue
+            unwantedChars = """][")("""
+            rgx = re.compile('[%s]' % unwantedChars)
+            ansible_groups = rgx.sub('',
+                                     server.metadata['ansible_host_groups']).split(',')
+            hostname = server.name
+            novaVolumes = cc.volumes.list(server.id)
+
+            # Let's do some port scanning using nmap
+            # Set Ansible Host Group
+
+            for group in ansible_groups:
+                groupName = group.strip()
+                if groupName not in inventory:
+                    inventory[groupName] = []
+                inventory[groupName].append(hostname)
+
+            # Add other metadata
+
+            for (key, value) in server.metadata.items():
+                if key not in ('project_name', 'ansible_host_groups'):
+                    inventory['_meta']['hostvars'][hostname] = {key: value}
+            if novaVolumes:
+                volDict = {}
+                for volume in novaVolumes:
+                    try:
+                        if volume.attachments[0]['server_id'] == server.id:
+                            volDict[volume.display_name] = \
+                                {'dev': '/dev/disk/by-id/virtio-' \
+                                        + volume.id[:20], 'uuid': volume.id}
+                    except IndexError:
+                        continue
+                if volDict:
+                    inventory['_meta']['hostvars'][hostname]['ansible_host_volumes'] = volDict
+            inventory['_meta']['hostvars'][hostname]['ansible_ssh_host'] = list(server.networks.values())[0][0]
+        else:
+
+            continue
+    return inventory
+
+
+def get_creds_dict(*names):
+    return {name: os.environ['OS_%s' % name.upper()]
+            for name in names if 'OS_%s' % name.upper() in os.environ}
+
+
+def merge(i, j):
+    for k in i.keys():
+        v = i[k]
+        if k in j:
+            if isinstance(v, list):
+                j[k].extend(v)
+            if isinstance(v, dict):
+                merge(i[k], j[k])
+        else:
+            j[k] = i[k]
+
+
+if __name__ == '__main__':
+    inventory = {}
+    inventory['_meta'] = {'hostvars': {}}
+    try:
+        authUrl = os.environ['OS_AUTH_URL']
+        userName = os.environ['OS_USERNAME']
+        passwd = os.environ['OS_PASSWORD']
+    except KeyError:
+        print ('Env Variables not set, Please run: source <openstack rc file>')
+        sys.exit()
+    if sys.argv[1] == 'static':
+        static = True
+        projectName = sys.argv[2]
+    else:
+        static = False
+        projectName = sys.argv[1]
+
+    # authenticate via session for v3
+    ks_creds_domain = get_creds_dict(
+        "username", "password", "user_domain_name", "auth_url", "cacert",
+        "domain_name")
+
+    ks_creds_admin = get_creds_dict(
+        "username", "password", "user_domain_name", "auth_url", "cacert",
+        "project_domain_name", "project_name", "project_domain_id", "project_id")
+    auth_domain = v3.Password(**ks_creds_domain)
+    auth_admin = v3.Password(**ks_creds_admin)
+    sess_domain = session.Session(auth=auth_domain)
+    sess_admin = session.Session(auth=auth_admin)
+
+    keystone = ksclient.Client(session=sess_domain)
+    nova = nvclient.Client(2, session=sess_admin)
+    cinder = cdclient.Client('3',session=sess_admin)
+
+    # sort of hardcode, due to projects.lists() require admin rights
+    _tenancies = [{'name': os.environ['OS_PROJECT_NAME'],'id': os.environ['OS_PROJECT_ID']}]
+
+    inventory_list = \
+        Parallel(n_jobs=len(_tenancies))(delayed(gatherInfo)(
+            projectName,
+            inventory,
+            nova,
+            cinder
+        ) for tenant in _tenancies)
+    inventory = {}
+    for i in inventory_list:
+        merge(i, inventory)
+    if not inventory['_meta']['hostvars']:
+        print ('I could not find any project called ', projectName, \
+            'in any of ')
+        for tenancy in _tenancies:
+            print (tenancy.name)
+        print ('''
+1. You can select a project by symlinking to it, for example if you have a project called myProject do ln -s dynamicInventory-mcc2 myProject
+ and then run ./myProject''')
+        print ('2. It is also possible that none of your VMs are allocated to myProject, please add them to the project: e.g. by running')
+        print ('nova --os-tenant-name TF_NNF --os-tenant-id 033asdda60d7046b6affdf31d14asdasb meta nodex set project_name="myProject"')
+        sys.exit()
+    else:
+        if static:
+            print ("#!/bin/bash\necho '" + json.dumps(inventory) + "'")
+        else:
+            print (json.dumps(inventory))

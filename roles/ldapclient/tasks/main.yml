@@ -1,5 +1,5 @@
 ---
 -
-  include: installOpenLdap.yml 
+  include_tasks: installOpenLdap.yml 
 -
-  include: configLdapClient.yml 
+  include_tasks: configLdapClient.yml 

@@ -3,4 +3,4 @@
 
 - name: restart ssh
   service: name={{ sshd_name }} state=restarted
-  sudo: true
+  become: yes

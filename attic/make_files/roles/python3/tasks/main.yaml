@@ -1,0 +1,11 @@
+---
+- name: install python39
+  command: dnf install -y python39
+  become: yes
+
+- name: create symlink to python
+  file:
+    src: "/bin/python3"
+    dest: "/bin/python"
+    state: link
+  become: yes

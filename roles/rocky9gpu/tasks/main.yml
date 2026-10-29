@@ -1,0 +1,162 @@
+---
+# use modinfo, not nvidia-smi: nvidia-smi hangs if nouveau touched the GPU first
+- name: Check installed NVIDIA driver
+  command: modinfo -F version nvidia
+  register: nvidia_current
+  changed_when: false
+  failed_when: false
+
+- name: Decide whether the driver needs installing
+  set_fact:
+    nvidia_install_needed: "{{ nvidia_current.rc != 0 or nvidia_current.stdout | trim != nvidia_driver_version }}"
+
+- name: Prepare the kernel
+  when: nvidia_install_needed
+  block:
+  # dkms comes from EPEL
+  - name: Install EPEL repository
+    dnf:
+      name: epel-release
+      state: present
+
+  - name: Upgrade the kernel
+    dnf:
+      name:
+        - kernel
+        - kernel-devel
+        - kernel-headers
+      state: latest
+
+# nouveau must never load: it crashes probing the V100 and leaves the GPU in a
+# state where the nvidia driver hangs. /etc/modprobe.d alone is not enough
+# because nouveau.ko is in the initramfs and loads from there.
+- name: Blacklist nouveau
+  copy:
+    src: blacklist-nouveau.conf
+    dest: /etc/modprobe.d/blacklist-nouveau.conf
+    mode: '0644'
+  register: nouveau_blacklist
+
+- name: Leave nouveau out of the initramfs
+  copy:
+    src: omit-nouveau.conf
+    dest: /etc/dracut.conf.d/omit-nouveau.conf
+    mode: '0644'
+  register: nouveau_dracut
+
+- name: Rebuild initramfs without nouveau
+  command: dracut -f --regenerate-all
+  when: nouveau_blacklist.changed or nouveau_dracut.changed
+
+# dracut deletes the image if /boot fills up, which leaves that kernel unbootable
+- name: Check every installed kernel has a readable initramfs
+  shell: |
+    rc=0
+    for k in $(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n'); do
+      lsinitrd /boot/initramfs-$k.img >/dev/null 2>&1 || { echo "missing or broken: /boot/initramfs-$k.img"; rc=1; }
+    done
+    exit $rc
+  changed_when: false
+
+# run after the kernel upgrade so the new kernel's boot entry gets the args too
+- name: Check nouveau is blacklisted on the kernel command line
+  shell: grubby --info=ALL | grep '^args=' | grep -vc 'rd.driver.blacklist=nouveau'
+  register: nouveau_cmdline
+  changed_when: false
+  failed_when: false
+
+- name: Blacklist nouveau on the kernel command line
+  command: grubby --update-kernel=ALL --args="rd.driver.blacklist=nouveau modprobe.blacklist=nouveau"
+  when: nouveau_cmdline.stdout | int > 0
+
+- name: Find the newest installed kernel
+  shell: rpm -q --last kernel | head -1 | cut -d' ' -f1 | sed 's/^kernel-//'
+  register: newest_kernel
+  changed_when: false
+
+- name: Check whether nouveau is loaded
+  shell: lsmod | grep -q '^nouveau'
+  register: nouveau_loaded
+  changed_when: false
+  failed_when: false
+
+# boot into the new kernel and without nouveau before anything touches the GPU
+- name: reboot the machine
+  reboot:
+    msg: "Rebooting the system..."
+    connect_timeout: 5
+    reboot_timeout: 600
+    pre_reboot_delay: 5
+    post_reboot_delay: 30
+  when: newest_kernel.stdout != ansible_kernel or nouveau_loaded.rc == 0
+
+- name: Check nouveau stayed out after the reboot
+  shell: lsmod | grep -q '^nouveau'
+  register: nouveau_after_reboot
+  changed_when: false
+  failed_when: nouveau_after_reboot.rc == 0
+
+- name: Install the NVIDIA driver
+  when: nvidia_install_needed
+  block:
+  - name: Get the running kernel
+    command: uname -r
+    register: running_kernel
+    changed_when: false
+
+  - name: Install kernel headers and build dependencies
+    dnf:
+      name:
+        - "kernel-devel-{{ running_kernel.stdout }}"
+        - "kernel-headers"
+        - gcc
+        - make
+        - dkms
+        - elfutils-libelf-devel
+        - libglvnd-devel
+        - pkgconf-pkg-config
+        - pciutils
+      state: present
+
+  - name: Download NVIDIA driver
+    get_url:
+      url: "{{ nvidia_driver_url }}"
+      dest: /tmp/NVIDIA-Linux-x86_64-{{ nvidia_driver_version }}.run
+      mode: '0755'
+
+  # --dkms rebuilds the module automatically when the kernel is updated
+  - name: Install NVIDIA driver
+    command: /tmp/NVIDIA-Linux-x86_64-{{ nvidia_driver_version }}.run --silent --accept-license --dkms --disable-nouveau --kernel-module-type={{ nvidia_kernel_module_type }} --rebuild-initramfs --allow-installation-with-running-driver
+    args:
+      chdir: /tmp
+
+- name: Install nvidia-persistenced service
+  copy:
+    src: nvidia-persistenced.service
+    dest: /etc/systemd/system/nvidia-persistenced.service
+    mode: '0644'
+  register: persistenced_unit
+
+- name: Start nvidia-persistenced
+  systemd:
+    name: nvidia-persistenced
+    state: started
+    enabled: yes
+    daemon_reload: "{{ persistenced_unit.changed }}"
+
+# async so a hung nvidia-smi fails the task instead of hanging the play
+- name: Check the GPU is visible
+  command: nvidia-smi -L
+  register: nvidia_smi
+  changed_when: false
+  async: 60
+  poll: 5
+
+- name: Check /dev/nvidia0 exists for slurm gres.conf
+  stat:
+    path: /dev/nvidia0
+  register: nvidia_dev
+  failed_when: not nvidia_dev.stat.exists
+
+- debug:
+    msg: "{{ nvidia_smi.stdout_lines }}"

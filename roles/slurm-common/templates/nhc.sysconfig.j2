@@ -1,3 +1,9 @@
+# Slurm knows the nodes by their short names, not the FQDN hostname(1) returns
+HOSTNAME={{ ansible_hostname }}
+{% if inventory_hostname not in groups['DesktopNodes'] %}
+# not a Slurm node: run the checks, but don't mark it online/offline in Slurm
+MARK_OFFLINE=0
+{% endif %}
 CONFDIR={{ nhc_dir }}/etc/nhc
 NHC_RM=slurm
 HELPERDIR={{ nhc_dir }}/libexec/nhc

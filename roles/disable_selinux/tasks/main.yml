@@ -1,0 +1,15 @@
+---
+- name: Ensure SELinux is disabled in configuration file
+  lineinfile:
+    path: /etc/selinux/config
+    regexp: '^SELINUX='
+    line: 'SELINUX=disabled'
+    backup: yes
+  notify: Reboot system
+  when: ansible_distribution == "Rocky"
+
+- name: Set SELinux to permissive mode immediately (avoids issues before reboot)
+  command: setenforce 0
+  ignore_errors: yes
+  when: ansible_distribution == "Rocky"
+

@@ -1,0 +1,32 @@
+---
+# run on one host only (login-0): the script lives on the share and cron must
+# not fire it from more than one place
+- name: install python3-ldap
+  dnf: name=python3-ldap state=present
+  become: yes
+
+- name: copy provision_account
+  template: src=provision_account.py.j2 dest={{ provision_account }} mode=0700 owner=root group=root
+  become: yes
+
+- name: run provision_account from cron
+  cron:
+    name: provision_account
+    minute: "{{ provision_cron_minute }}"
+    job: "flock -n /run/provision_account.lock {{ provision_account }} >> {{ provision_log }} 2>&1"
+  become: yes
+  tags: cron
+
+- name: rotate the provision_account log
+  copy:
+    dest: /etc/logrotate.d/provision_account
+    content: |
+      {{ provision_log }} {
+          weekly
+          rotate 4
+          compress
+          missingok
+          notifempty
+      }
+    mode: 0644
+  become: yes

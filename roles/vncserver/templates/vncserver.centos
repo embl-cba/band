@@ -59,6 +59,7 @@ $defaultXStartup
     = ("#!/bin/sh\n\n".
        "unset SESSION_MANAGER\n".
        "unset DBUS_SESSION_BUS_ADDRESS\n".
+       "source /etc/profile\n".
        "exec mate-session\n");
 
 chop($host = `uname -n`);

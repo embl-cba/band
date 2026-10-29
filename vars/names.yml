@@ -1,2 +1,2 @@
 ---
-domain: example.com # YOUR DOMAIN HERE
+domain: "{{ site_domain }}"

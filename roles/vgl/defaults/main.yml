@@ -1,0 +1,3 @@
+---
+# EPEL 9 only has 3.1.2; newer releases come from VirtualGL's official repo
+vgl_version: 3.1.5

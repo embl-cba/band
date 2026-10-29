@@ -5,7 +5,7 @@
     regexp: "ChallengeResponseAuthentication yes"
     line: "ChallengeResponseAuthentication no" 
     backrefs: yes
-  sudo: true
+  become: yes
   notify: 
   - restart sshd
   - restart ssh
@@ -17,7 +17,7 @@
     regexp: "PasswordAuthentication no"
     line: "PasswordAuthentication yes"
     backrefs: yes
-  sudo: true
+  become: yes
   notify: 
   - restart sshd
   - restart ssh
@@ -29,7 +29,7 @@
     regexp: "PasswordAuthentication yes"
     line: "PasswordAuthentication no"
     backrefs: yes
-  sudo: true
+  become: yes
   notify: 
   - restart sshd
   - restart ssh

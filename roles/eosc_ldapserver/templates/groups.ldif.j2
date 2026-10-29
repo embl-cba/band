@@ -1,0 +1,21 @@
+dn: cn=sysadmin,{{ ldapGroupBase }}
+cn: sysadmin
+objectClass: top
+objectClass: posixGroup
+gidNumber: 1100
+description: Systems administrators.
+
+dn: cn=nssproxy,{{ ldapGroupBase }}
+cn: nssproxy
+objectClass: top
+objectClass: posixGroup
+gidNumber: 1101
+description: Network Service Switch Proxy.
+
+dn: cn=users,{{ ldapGroupBase }}
+cn: users
+objectClass: top
+objectClass: posixGroup
+gidNumber: 1102
+description: All users in the system.
+

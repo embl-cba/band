@@ -1,12 +1,14 @@
 ## YAML Template.
 ---
-ansible_os_family: RedHat
+# The OS of ansible control machine has only been
+# tested for CentOS. Change this to other value may break the code.
+ansible_os_family: Rocky
 
 # Java versions used.
-java_major: 8
-java_minor: 171
+java_major: 17
+java_minor: 0.8
 #java_build: 15
-java_home: /usr/lib/jvm/java-8-oracle
+#java_home: /usr/lib/jvm/java-8-oracle
 
 install_dir: /mnt
 

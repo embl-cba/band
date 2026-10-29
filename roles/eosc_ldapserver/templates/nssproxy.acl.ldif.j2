@@ -1,0 +1,16 @@
+# nssproxy.acl.ldif
+#
+# First delete the already configured ACL at position {0}.
+dn: {{ dbname }},cn=config
+changetype: modify
+delete: olcAccess
+olcAccess: {0}
+-
+# Then add a new ACL at position {0}.
+add: olcAccess
+olcAccess: {0}to * by dn.base="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage 
+ by dn.base="{{ ldapBindDN }}" read 
+ by * auth 
+ by * none
+
+# EOF

@@ -1,12 +1,20 @@
 [Unit]
 Description=Slurm controller daemon
-After=network.target
+After=network-online.target remote-fs.target munge.service sssd.service slurmdbd.service
+Wants=network-online.target
 ConditionPathExists={{ slurm_dir }}/etc/slurm.conf
 
+# based on the unit shipped with Slurm 25.11; slurmctld must run as SlurmUser
 [Service]
-Type=forking
-#EnvironmentFile=/etc/default/slurmctld
-ExecStart={{ slurm_dir }}/sbin/slurmctld -i $SLURMCTLD_OPTIONS
-PIDFile={{ slurmpiddir }}/slurmctld.pid
+Type=notify
+User=slurm
+Group=slurm
+EnvironmentFile=-/etc/sysconfig/slurmctld
+ExecStart={{ slurm_dir }}/sbin/slurmctld --systemd -i $SLURMCTLD_OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+TasksMax=infinity
+
 [Install]
 WantedBy=multi-user.target

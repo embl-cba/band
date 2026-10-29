@@ -1,16 +1,18 @@
 ---
 - name: install deps in control node
   yum: name={{ item }} state=installed
-  sudo: true
+  become: yes
   with_items:
-    - mysql
-    - mysql-devel
-    - MySQL-python
-  when: ansible_distribution == 'CentOS'
+    #- mysql
+    #- mysql-devel
+    - mariadb-connector-c
+    - mariadb-connector-c-devel
+    - python3-PyMySQL
+  when: ansible_distribution == 'Rocky'
 
 - name: install deps in control node
   apt: name={{ item }} state=installed
-  sudo: true
+  become: yes
   with_items:
     - mysql-client
     - libmysqlclient-dev
@@ -19,20 +21,20 @@
 
 - name: make sure config dir exists
   file: path="{{ slurm_dir }}/etc" state=directory
-  sudo: true
+  become: yes
 
 - name: install slurmdb.conf
-  copy: src=files/slurmdbd.conf dest={{ slurm_dir }}/etc/slurmdbd.conf
-  sudo: true
+  copy: src=files/slurmdbd.conf dest={{ slurm_dir }}/etc/slurmdbd.conf owner=root mode=600
+  become: yes
   when: slurm_dir is defined
 
 
 - name: install slurmdbd.conf
-  copy: src=slurmdbd.conf dest=/etc/slurm/slurmdbd.conf
-  sudo: true
+  copy: src=slurmdbd.conf dest=/etc/slurm/slurmdbd.conf mode=600
+  become: yes
   when: slurm_dir is not defined
 
 - name: add slurm db log rotate config
   template: src=slurmdblog.j2 dest=/etc/logrotate.d/slurmdb mode=644
-  sudo: true
+  become: yes
 

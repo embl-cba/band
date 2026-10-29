@@ -1,0 +1,44 @@
+---
+- name: Create system-wide lockdown settings
+  become: yes
+  copy:
+    dest: /etc/dconf/db/local.d/00-lockdown
+    content: |
+      [org/gnome/desktop/lockdown]
+      disable-log-out=true
+      disable-user-switching=true
+      disable-lock-screen=true
+
+      [org/gnome/settings-daemon/plugins/power]
+      power-button-action='nothing'
+      sleep-inactive-ac-type='nothing'
+      sleep-inactive-battery-type='nothing'
+
+- name: lock the setting to prevent user override
+  become: yes
+  copy:
+    dest: /etc/dconf/db/local.d/locks/lockdown
+    content: |
+      /org/gnome/desktop/lockdown/disable-log-out
+      /org/gnome/desktop/lockdown/disable-user-switching
+      /org/gnome/desktop/lockdown/disable-lock-screen
+      /org/gnome/settings-daemon/plugins/power/power-button-action
+      /org/gnome/settings-daemon/plugins/power/sleep-inactive-ac-type
+      /org/gnome/settings-daemon/plugins/power/sleep-inactive-battery-type
+
+- name: Disable suspend, hibernate, and sleep system-wide
+  become: true
+  systemd:
+    name: "{{ item }}"
+    masked: true
+    enabled: false
+    state: stopped
+  loop:
+    - sleep.target
+    - suspend.target
+    - hibernate.target
+    - hybrid-sleep.target
+
+- name: Update dconf database
+  become: yes
+  command: dconf update

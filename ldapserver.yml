@@ -1,0 +1,7 @@
+- hosts: 'ldapserver' 
+  user: rocky
+  become: yes
+  gather_facts: true    
+  roles: 
+     - eosc_ldapserver
+

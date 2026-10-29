@@ -1,0 +1,17 @@
+---
+use_active_directory: False
+search_filter: "{% if use_active_directory %}(unixHomeDirectory=*){% else %}(objectClass=posixAccount){% endif %}"
+# /usr/local/sbin links into the NFS share, so every host sees this one copy;
+# it holds the LDAP bind password, hence root-only
+provision_account: /usr/local/sbin/provision_account.py
+provision_slurm_account: default
+provision_cron_minute: "*/3"
+provision_log: /var/log/provision_account.log
+
+# welcome mail to newly created users; set the SMTP ones in vars/passwords.yml
+provision_send_email: False
+provision_smtp_host: ""
+provision_smtp_port: 465
+provision_smtp_user: ""
+provision_smtp_password: ""
+provision_mail_from: ""

@@ -1,0 +1,21 @@
+# users+groups.ldif
+#
+# The base suffix.
+dn: {{ ldapBase }}
+dc: {{ ldapOrg }}
+objectClass: top
+objectClass: domain
+
+dn: {{ ldapUserBase }}
+ou: Users
+objectClass: top
+objectClass: organizationalUnit
+description: Central location for all users
+
+dn: {{ ldapGroupBase }}
+ou: Groups
+objectClass: top
+objectClass: organizationalUnit
+description: Central location for all groups
+
+# EOF

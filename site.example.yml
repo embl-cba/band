@@ -1,0 +1,40 @@
+# Template for group_vars/all/site.yml, which holds the real site values and
+# is not in git:  cp site.example.yml group_vars/all/site.yml  and edit.
+# Ansible loads it automatically for every playbook and ad-hoc command.
+
+# ansible_host of every inventory host
+site_hosts:
+  mgmt-0:      10.0.0.11
+  login-0:     10.0.0.12
+  node-1:      10.0.0.13
+  node-2:      10.0.0.14
+  node-3:      10.0.0.15
+  node-4:      10.0.0.16
+  node-5:      10.0.0.17
+  node-6:      10.0.0.18
+  node-7:      10.0.0.19
+  node-8:      10.0.0.20
+  band-portal: 10.0.0.21
+
+# kernel domainname on all nodes (0_base)
+site_domain: "cluster.example.org"
+
+# public name of the portal (nginx, OIDC redirect)
+site_portal_hostname: "band.example.org"
+
+# LDAP server, used as ldaps://<this>
+site_ldap_host: "ldap.example.org"
+
+# Keycloak realm the portal logs in with
+site_keycloak_realm_url: "https://auth.example.org/auth/realms/<realm>"
+
+# Keycloak clients (their secrets are vaulted in roles/eosc_vd_portal/vars/main.yml)
+site_oidc_client_id: "<portal client id>"
+site_oidc_resource_clientid: "<resource server client id>"
+site_oidc_resource_resourceid: "<portal client id>"
+site_oidc_group_clientid: "<group manager client id>"
+
+# portal group manager: sender address (SMTP password is vaulted), problem reports, SMTP host
+site_admin_email: "admin@example.org"
+site_admin_notify_email: "support@example.org"
+site_admin_smtp_host: "smtp.example.org"

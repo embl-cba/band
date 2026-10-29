@@ -1,0 +1,7 @@
+---
+- name: Reboot system
+  command: shutdown -r now "Rebooting to apply SELinux changes"
+  async: 1
+  poll: 0
+  ignore_errors: yes
+

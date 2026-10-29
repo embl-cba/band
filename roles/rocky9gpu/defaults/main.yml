@@ -1,0 +1,6 @@
+---
+# 580 is the last driver branch that supports Volta (Tesla V100)
+nvidia_driver_version: 580.196.07
+# the open kernel modules need Turing or newer, V100 must use the proprietary one
+nvidia_kernel_module_type: proprietary
+nvidia_driver_url: https://us.download.nvidia.com/tesla/{{ nvidia_driver_version }}/NVIDIA-Linux-x86_64-{{ nvidia_driver_version }}.run

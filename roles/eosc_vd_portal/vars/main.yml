@@ -1,33 +1,34 @@
-### tomcat, modify version and download url
-apache_tomcat_version: 9.0.62
-apache_tomcat_url: "http://apache.mirror.digitalpacific.com/tomcat/tomcat-9/v{{apache_tomcat_version}}/bin/apache-tomcat-{{apache_tomcat_version}}.tar.gz"
+### tomcat
+apache_tomcat_version: 9.0.102
+apache_tomcat_url: "https://dlcdn.apache.org/tomcat/tomcat-9/v{{apache_tomcat_version}}/bin/apache-tomcat-{{apache_tomcat_version}}.tar.gz"
+  
 
-### portal client, 
+### portal client
 portal_client_version: 0.0.1
-portal_client_package: "https://git.embl.de/ysun/job-client/downloads/client.war"
+portal_client_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/client.war"
 
 ### resource server
 resource_server_version: 0.0.4
-resource_server_package: "https://git.embl.de/ysun/keycloak-resource-server.jar"
+resource_server_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/resource-server-0.0.4.jar"
 
 ### group resource server
 gr_resource_server_version: 0.0.2
-gr_resource_server_package: "https://git.embl.de/ysun/keycloak-group-rs/downloads/keycloak-group-rs.jar"
+gr_resource_server_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/eosc-group-rs-0.0.2.jar"
 
 ### eosc portal
 eosc_js_version: 0.0.2
-eosc_js_package: "https://git.embl.de/ysun/vd-portal-js/downloads/vd-portal-js-{{eosc_js_version}}.tar.gz"
+eosc_js_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/eosc-js.tar"
 
 ### guacamole
 guacamole_version: 1.0.0
-guacamole_package: "http://apache.mirror.digitalpacific.com.au/guacamole/{{guacamole_version}}/binary/guacamole-{{guacamole_version}}.war"
+guacamole_package: "http://archive.apache.org/dist/guacamole/{{guacamole_version}}/binary/guacamole-{{guacamole_version}}.war"
 
 ### guacamole home
 guacamole_home: /etc/guacamole
 
-### massive plugin (guacamole plugin)
+### massive plugin
 massive_plugin_version: 1.0.0
-massive_plugin_package: https://github.com/monash-merc/massive-guacamole-remote/downloads/massive-guacamole-remote.jar
+massive_plugin_package: https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/massive-guacamole-remote-1.0.0.jar
 ## gson 2.4
 gson_24_url: https://repo1.maven.org/maven2/com/google/code/gson/gson/2.4/gson-2.4.jar
 
@@ -42,25 +43,57 @@ certs_dir: /etc/certs
 ### tempfs
 temp_dir: "{{eosc_dir}}/tmpfs"
 
-## prod. these configurations are from your keycloak server, the values below are just example, modify according to your own keycloak server
-eosc_endpoint: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/auth
-eosc_token_endpoint: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/token
-eosc_client_id: eosc-client
-eosc_client_secret: #your_own_secret from keycloak
+## prod
+# Keycloak realm and client ids: set in group_vars/all/site.yml
+eosc_oidc_realm_url: "{{ site_keycloak_realm_url }}"
+eosc_endpoint: "{{ eosc_oidc_realm_url }}/protocol/openid-connect/auth"
+eosc_token_endpoint: "{{ eosc_oidc_realm_url }}/protocol/openid-connect/token"
+eosc_client_id: "{{ site_oidc_client_id }}"
+eosc_client_secret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          61633330643663333933306337306364363437656137613936656163383335656264313135666261
+          6135366639613536323863366164316664376536636339610a643038623939326535623837366566
+          66633262353763336662396664666532393535653539653932366435383165663639666436353633
+          6466383864363837350a396561396363636166366365323837376534636635613739656366326235
+          38323466663338646665636264643931393432386235393565643833303730373264373063666334
+          3966393364323336633334623435363133653138653331356262
 eosc_redirect: "https://{{eosc_portal_hostname}}/client/api/oauth/callback/eosc"
-eosc_issuer: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc
-eosc_jwkUrl: https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/certs
-# resource server
-eosc_token_info_uri:  https://YOUR_KEYCLOAK_SERVER/auth/realms/eosc/protocol/openid-connect/token/introspect
-eosc_resource_clientsecret: # your client secret here
-eosc_resource_clientid: resource
-eosc_resource_resourceid: eosc-client
+eosc_issuer: "{{ eosc_oidc_realm_url }}"
+eosc_jwkUrl: "{{ eosc_oidc_realm_url }}/protocol/openid-connect/certs"
+# resouorce server
+eosc_token_info_uri:  "{{ eosc_oidc_realm_url }}/protocol/openid-connect/token/introspect"
+eosc_resource_clientsecret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          31626532666362646532373533383466393436613230653032326636356332356130626563663865
+          3066383230393664336564643036386562323465666464630a393039663234306539366365373464
+          32343361376234383335613634363836613836336331636338306235336638656339663936366462
+          3134616438366231370a623739633362336466333132663439326138306637623431376530363938
+          34303861356363623761333561323063373561326536396337326438323936373164333533616261
+          3965373436393663303731343939363336613339363334333366
+eosc_resource_clientid: "{{ site_oidc_resource_clientid }}"
+eosc_resource_resourceid: "{{ site_oidc_resource_resourceid }}"
 eosc_resource_authority_check: hasAuthority('USER')
-# group manager resource server (if you are using it)
-eosc_group_resource_clientsecret: # client secret from keyloak
-eosc_group_resource_clientid: groupmanager
+# group manager resource server
+eosc_group_resource_clientsecret: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          30343535366235353763373038313136363433343664616339363038383563376339626263623466
+          3634326337626262373365346462313434386432306135370a383464666438623235376463383835
+          34613532666266323466663064633666393238313834346363386561646464653732323563306263
+          3965646466303364640a666136626230386138633262386661663630306634333032346139633330
+          33326438393636373433363861346539626262333963346636363861326532303635623863333435
+          3830336232386130633834323338336231613033383263666237
+eosc_group_resource_clientid: "{{ site_oidc_group_clientid }}"
 
 login_host: "{{ hostvars[groups['LoginNodes'][0]]['ansible_ssh_host'] }}"
 resource_server_port: 9001
 group_resource_server_port: 9002
 guad_port: 4822
+
+# SMTP password for admin-email-* in eosc_grouprs_security.properties
+eosc_admin_email_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          30646661656336656334616134323330353931653863336334653561393431393030396164396638
+          3463353537313936356563346465306632393262663964320a343939633739653936636538313232
+          66373936643664333863336630363330343332313630333363393730633134623731623038363062
+          6563616132373133610a366263383039383764383737616131646338353039306136363236313234
+          3830

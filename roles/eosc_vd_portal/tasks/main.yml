@@ -7,7 +7,7 @@
 ###### neccessary packages
 - name: Installing packages for the portal
   apt: name="{{portal_packages}}" update_cache=yes cache_valid_time=3600 state=present force_apt_get=yes
-  sudo: true
+  become: yes
 
 
 
@@ -32,13 +32,13 @@
     mode: '0755'
 
 - name: copy gson_24
-  sudo: true
+  become: yes
   get_url:
     url: "{{ gson_24_url }}"
     dest: "{{ guacamole_home }}/lib/gson-2.4.jar"
 
     #- name: copy massive plugin client
-    #  sudo: true
+    #  become: yes
     #  get_url:
     #    url: "{{ massive_plugin_package }}"
     #    dest: "{{ guacamole_home }}/extensions/massive-guacamole-remote-{{massive_plugin_version}}.jar"
@@ -50,12 +50,12 @@
     dest: "{{guacamole_home}}/guacamole.properties"
     owner: root
     mode: 644
-  sudo: true
+  become: yes
 
 
 ###### Apache tomcat and webapps
 - name: Download and unarchive tomcat
-  sudo: true
+  become: yes
   unarchive:
     src: "{{apache_tomcat_url}}"
     dest: /opt
@@ -68,17 +68,17 @@
     owner: root
     group: root
     state: link
-  sudo: true
+  become: yes
 
 
 - name: copy client to tomcat
-  sudo: true
+  become: yes
   get_url:
     url: "{{ portal_client_package }}"
     dest: "{{ tomcat_dir }}/webapps/client.war"
 
 - name: copy guacamole client
-  sudo: true
+  become: yes
   get_url:
     url: "{{ guacamole_package }}"
     dest: "{{ tomcat_dir }}/webapps/guacamole.war"
@@ -86,7 +86,7 @@
 
 ## Centos is in /usr/lib
 - name: copy tomcat systemd
-  sudo: true
+  become: yes
   template: 
     src: tomcat.service.j2
     dest: /lib/systemd/system/tomcat.service
@@ -100,10 +100,10 @@
     owner: root
     group: root
     state: link
-  sudo: true
+  become: yes
 
 - name: eosc.properties template
-  sudo: true
+  become: yes
   template: 
     src: eosc.properties.j2
     dest: "{{ tomcat_dir }}/lib/eosc.properties"
@@ -152,11 +152,11 @@
 
 - name: copy xml file over
   copy: src="files/eosc.log4j2.xml" dest="{{ eosc_dir }}"
-  sudo: true
+  become: yes
   
 - name: copy eosc.json
   copy: src="files/eosc.json" dest="{{ eosc_dir }}"
-  sudo: true
+  become: yes
 
 - name: Create /opt/eosc/tempfs if not exists
   file:
@@ -173,7 +173,7 @@
     opts: size=200M
     state: present 
   #shell: mount -t tmpfs -o size=200M tmpfs "{{ eosc_dir }}/tempfs"
-  #sudo: true
+  #become: yes
 
 ### eosc resource server
 - name: copy resource server
@@ -187,11 +187,11 @@
     dest: "{{eosc_dir}}/eosc_security.properties"
     owner: root
     mode: 644
-  sudo: true
+  become: yes
 
 - name: eosc-rs template
   template: src=eosc-rs.j2 dest="{{eosc_dir}}/eosc-rs" owner="root" mode="0755"
-  sudo: true
+  become: yes
 
 - name: copy eosc resource systemd
   template: 
@@ -199,7 +199,7 @@
     dest: /lib/systemd/system/eosc-rs.service
     owner: root
     mode: 644
-  sudo: true
+  become: yes
 
 - name: symlink to eosc-rs.server
   file:
@@ -208,7 +208,7 @@
     owner: root
     group: root
     state: link
-  sudo: true
+  become: yes
 
 - name: Make sure eosc-rs is running
   systemd:
@@ -229,11 +229,11 @@
     dest: "{{eosc_dir}}/eosc_grouprs_security.properties"
     owner: root
     mode: 644
-  sudo: true
+  become: yes
 
 - name: eosc-group-rs template
   template: src=eosc-group-rs.j2 dest="{{eosc_dir}}/eosc-group-rs" owner="root" mode="0755"
-  sudo: true
+  become: yes
 
 - name: copy eosc-group resource systemd
   template: 
@@ -241,7 +241,7 @@
     dest: /lib/systemd/system/eosc-group-rs.service
     owner: root
     mode: 644
-  sudo: true
+  become: yes
 
 - name: symlink to eosc-group-rs.service
   file:
@@ -250,7 +250,7 @@
     owner: root
     group: root
     state: link
-  sudo: true
+  become: yes
   
 - name: Make sure eosc-group-rs is running
   systemd:
@@ -265,12 +265,6 @@
     state: directory
     mode: '0755'
 
-    #- name: copy front-end code
-    #  unarchive:
-    #    src: "{{eosc_js_package}}"
-    #    dest: "/var/www/html/eosc-js-{{eosc_js_version}}"
-    #    remote_src: yes
-
 - name: symlink to eosc-group-rs.service
   file:
     src: "/var/www/html/eosc-js-{{eosc_js_version}}"
@@ -278,7 +272,7 @@
     owner: root
     group: root
     state: link
-  sudo: true
+  become: yes
 
 
 #### nginx
@@ -288,7 +282,7 @@
     dest: /etc/nginx/sites-available/ssl
     owner: root
     mode: 644
-  sudo: true
+  become: yes
   
 
 - name: Create a symbolic link to apache tomcat
@@ -298,13 +292,13 @@
     owner: root
     group: root
     state: link
-  sudo: true
+  become: yes
 
 - name: Create a symbolic link to apache tomcat
   file:
     path: /etc/nginx/sites-enabled/default
     state: absent
-  sudo: true
+  become: yes
 
 - name: Make sure mongodb is restarted
   systemd:

@@ -5,5 +5,5 @@
     - nfs-common
     - nfs-kernel-server
   apt: "name={{ item }} state=present"
-  sudo: true
+  become: yes
 

@@ -1,0 +1,81 @@
+- name: copy openssl.cnf.j2
+  template:
+    src: "openssl.cnf.j2"
+    dest: "/etc/pki/tls/openssl.cnf"
+    mode: 0644
+
+- name: create /tmp/certs
+  file: path="/tmp/certs" state=directory mode=0755
+
+- name: remove existing pem file
+  file: path="/tmp/certs/{{hostname}}.pem" state=absent
+
+- name: create privatekey.pem and rootca.cert
+  command: bash -lc "cd /tmp/certs && /usr/bin/openssl req -newkey rsa:2048 -days 3650 -x509 -nodes -out rootca.crt -batch"
+
+#the next 6 steps are to prepare files to match myca.conf
+- name: create /etc/pki/tls/certs/certindex
+  file: path="/etc/pki/tls/certs/certindex" state=touch owner="root" group="root" mode=0600
+
+- name: create serialfile
+  command: bash -lc "echo 000a > /tmp/serialfile && mv /tmp/serialfile /etc/pki/tls/certs/serialfile"
+
+- name: make sure serialfile has the correct permission
+  file: path="/etc/pki/tls/certs/serialfile" owner="root" group="root" mode=0600
+
+- name: copy privkey.pem over to /etc/pki/tls/certs
+  command: bash -lc "cd /tmp/certs && cp privkey.pem /etc/pki/tls/certs/privkey.pem && cp rootca.crt /etc/pki/tls/certs/rootca.crt"
+
+- name: make sure privkey.pem has the correct permission
+  file: path="/etc/pki/tls/certs/privkey.pem" owner={{ ldapuser }} group={{ ldapgroup }} mode=0600 
+
+- name: make sure rootca.crt has the correct permission
+  file: path="/etc/pki/tls/certs/rootca.crt" owner={{ ldapuser }} group={{ ldapgroup }} mode=0600
+
+#copy myca over
+- name: copy myca.conf.j2 over
+  template: src="myca.conf.j2" dest="/tmp/certs/myca.conf" mode=600
+
+# generate public and private key for the ldap server
+- name: generate key + cert for ldapsever
+  command: bash -lc "cd /tmp/certs/ && /usr/bin/openssl req -newkey rsa:5024 -nodes -out {{ hostname }}.csr -keyout {{ hostname }}.key -batch"
+
+- name: sign the csr
+  command: bash -lc "cd /tmp/certs/ && /usr/bin/openssl ca -batch -config ./myca.conf -notext -in {{ hostname }}.csr -days 730 -out {{ hostname }}.crt"
+
+- name: move key and crt of the server to correct location
+  command: bash -lc "cp /tmp/certs/{{ hostname }}.key /etc/pki/tls/certs/{{ hostname }}.key && cp /tmp/certs/{{ hostname }}.crt /etc/pki/tls/certs/{{ hostname }}.crt"
+
+
+- name: ensure that key has correct permission
+  file: path="/etc/pki/tls/certs/{{ hostname }}.key" owner={{ ldapuser }} group={{ ldapgroup }} mode=600
+
+- name: ensure that key has correct permission
+  file: path="/etc/pki/tls/certs/{{ hostname }}.crt" owner={{ ldapuser }} group={{ ldapgroup }} mode=600
+
+- name: copy the ldap_mod_tls.ldif
+  template: src="ldap_mod_tls.ldif.j2" dest="/tmp/ldap/ldap_mod_tls.ldif" mode=644
+
+#TODO: comment when running again
+- name: modify ldap to accept certs
+  command: "/usr/bin/ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/ldap/ldap_mod_tls.ldif"
+
+- name: update ldap.conf with tls 
+  template:
+    src: "ldaps.conf.j2"
+    dest: "{{ ldapDir }}/ldap.conf"
+    mode: 0644 
+
+- name: update ldap 
+  template: 
+    src: "ldaps.j2"
+    dest: "/etc/sysconfig/ldap"
+    owner: "root"
+    group: "root"
+    mode: 0644
+
+- name: restart slapd
+  service: name=slapd state=restarted
+
+- name: get the rootca back
+  fetch: src="/tmp/certs/rootca.crt" dest="files/rootca.crt" flat="yes"  

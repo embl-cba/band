@@ -1,0 +1,3 @@
+# render OpenGL through VirtualGL's EGL back end on the V100: vglrun <app>
+# VirtualGL needs the real /dev/dri/cardN name, not the by-path symlink, and N can change between boots
+setenv VGL_DISPLAY `readlink -f /dev/dri/by-path/pci-{{ nvidia_pci.stdout }}-card`

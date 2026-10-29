@@ -1,0 +1,24 @@
+---
+# mesa-libglapi is gone on Rocky 9 (merged into mesa-libGL); metacity and
+# gnome-flashback come from EPEL, dbus-x11 provides dbus-launch for xstartup
+ system_packages:
+   - tigervnc-server
+   - libXcomposite
+   - libXdamage
+   - mesa-libEGL
+   - mesa-libgbm
+   - harfbuzz
+   - mesa-libGL
+   - graphite2
+   - xterm
+   - libpng
+   - xorg-x11-fonts-100dpi
+   - xorg-x11-fonts-75dpi
+   - xorg-x11-fonts-misc
+   - metacity
+   - gnome-flashback
+   - dbus-x11
+
+ system_group_packages:
+   - "Server with GUI"
+   - "graphical-server-environment"

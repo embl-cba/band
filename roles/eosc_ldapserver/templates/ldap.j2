@@ -1,0 +1,53 @@
+# /etc/sysconfig/ldap
+#
+# $Id: ldap,v 1.1 2012/04/24 14:37:10 root Exp root $
+#
+# Configurations for slapd(8).
+# Here's a list of debug codes obtained via `sudo slapd -d ?`
+# Installed log subsystems:
+#
+# Any                            (-1, 0xffffffff)
+# Trace                          (1, 0x1)
+# Packets                        (2, 0x2)
+# Args                           (4, 0x4)
+# Conns                          (8, 0x8)
+# BER                            (16, 0x10)
+# Filter                         (32, 0x20)
+# Config                         (64, 0x40)
+# ACL                            (128, 0x80)
+# Stats                          (256, 0x100)
+# Stats2                         (512, 0x200)
+# Shell                          (1024, 0x400)
+# Parse                          (2048, 0x800)
+# Sync                           (16384, 0x4000)
+# None                           (32768, 0x8000)
+#
+# NOTE: custom log subsystems may be later installed by specific code
+#
+# David Robillard, April 24th, 2012.
+
+# Options of slapd (see man slapd)
+# Use this one to debug ACL...
+# SLAPD_OPTIONS="-4 -d 128"
+# Use this one for day-to-day production usage.
+SLAPD_OPTIONS="-4"
+
+# Run slapd with -h "... ldap:/// ..."
+#   yes/no, default: yes
+SLAPD_LDAP=yes
+
+# Run slapd with -h "... ldapi:/// ..."
+#   yes/no, default: yes
+SLAPD_LDAPI=yes
+
+# Run slapd with -h "... ldaps:/// ..."
+#   yes/no, default: no
+SLAPD_LDAPS=no
+
+# Maximum allowed time to wait for slapd shutdown on 'service ldap stop' (in seconds)
+SLAPD_SHUTDOWN_TIMEOUT=15
+
+# Parameters to ulimit, use to change system limits for slapd
+#SLAPD_ULIMIT_SETTINGS=""
+
+# EOF

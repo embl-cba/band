@@ -16,6 +16,31 @@ https://band.vm.fedcloud.eu
 ## Deploy your own BAND  ## 
   Please refer to the [WIKI page](https://git.embl.de/ysun/create-band/-/wikis/Home) for setting up BAND
 
+## This repository ##
+The Ansible code here is the deployment of the de.NBI Tübingen node
+(branch `tubi`; `main` currently follows it): Rocky Linux 9, Slurm 25.11,
+GPU desktop nodes with NVIDIA drivers and VirtualGL, LDAP accounts, NFS homes,
+TigerVNC desktops and S3 bucket mounting. The cluster is installed by numbered
+playbooks `0_base.yml` … `10_s3fs.yml`, which `cluster_installation.yml` runs
+in order. [NEW_INSTANCE.md](NEW_INSTANCE.md) describes each step, the
+requirements and the known pitfalls.
+
+Not in the repository, by design. Placeholders are pushed instead:
+- **Site values.** Host IP addresses, server names (cluster domain, portal,
+  LDAP server), the Keycloak realm URL and client ids, and the portal's admin
+  and support e-mail addresses and SMTP host are set in
+  `group_vars/all/site.yml`, which git ignores. `inventory_tubi` and the vars
+  files only refer to them. To deploy, copy `site.example.yml` to
+  `group_vars/all/site.yml` and fill in your own values.
+- **`/etc/hosts`.** `files/etcHosts` is ignored too; start from
+  `files/etcHosts.example`.
+- **The vault password.** Passwords, keys and client secrets, as well as the
+  SMTP user name and the welcome-mail sender, are encrypted with ansible-vault
+  (`vars/passwords.yml`). `ansible.cfg` expects the password in
+  `~/.ansible/vault_pass_tubi`. For a new site, replace the encrypted values
+  with your own, encrypted with your own vault password (see the
+  "Secrets" section of NEW_INSTANCE.md).
+
 
 The code is partly based on https://github.com/monash-merc/ansible_cluster_in_a_box
 

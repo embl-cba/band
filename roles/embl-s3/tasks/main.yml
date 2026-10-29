@@ -1,0 +1,37 @@
+---
+- name: Ensure Python 3 and tkinter are installed
+  become: yes
+  dnf:
+    name:
+      - python3
+      - python3-tkinter
+    state: present
+
+- name: Ensure destination directory exists
+  become: yes
+  file:
+    path: "{{ deploy_script_dest }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy Python script to remote host
+  become: true
+  copy:
+    src: "{{ deploy_script_name }}"
+    dest: "{{ deploy_script_dest }}/{{ deploy_script_name }}"
+    mode: '0755'
+
+- name: Create a .desktop file to launch GUI app
+  become: yes
+  copy:
+    dest: "/usr/share/applications/{{ deploy_script_name | regex_replace('\\.py$', '') }}.desktop"
+    content: |
+      [Desktop Entry]
+      Name=Mount S3 Buckets
+      Icon=folder-remote
+      Exec=/bin/python3 {{ deploy_script_dest }}/{{ deploy_script_name }}
+      Type=Application
+      Terminal=false
+      Categories=DataAccess;
+    mode: '0644'
+  when: create_desktop_entry | default(false)

@@ -1,0 +1,21 @@
+
+- hosts: '*'
+  gather_facts: yes
+  tasks:
+  - include_vars: vars/passwords.yml 
+  - include_vars: vars/names.yml
+  - include_vars: vars/ldapConfig.yml
+  - include_vars: vars/slurm.yml 
+
+- hosts: '*'
+  tasks:
+  - name: Print all available facts
+    ansible.builtin.debug:
+      var: ansible_facts
+
+- hosts: 'ManagementNodes'
+  gather_facts: yes
+  roles:
+  - { role: python3 }
+  - { role: calculateEtcHosts }
+  - { role: calculateSlurmConf }

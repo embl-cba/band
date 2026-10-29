@@ -1,10 +1,7 @@
 - name: Download nhc source
   shell: wget https://github.com/mej/nhc/releases/download/{{nhc_version}}/lbnl-nhc-{{nhc_version}}.tar.xz
-  # shell: wget --no-check-certificate  https://cvl.massive.org.au/warewulf-nhc-{{ nhc_version }}.tar.gz
-#  shell: wget http://warewulf.lbl.gov/downloads/releases/warewulf-nhc/warewulf-nhc-{{ nhc_version }}.tar.gz
   args:
     chdir: /tmp
-    # creates: /tmp/warewulf-nhc-{{ nhc_version }}.tar.gz
     creates: /tmp/lbnl-nhc-{{nhc_version}}.tar.xz
 
 - name: untar nhc
@@ -21,26 +18,26 @@
 
 - name: install nhc
   shell: make install
-  sudo: true
+  become: yes
   args:
     # chdir: /tmp/warewulf-nhc-{{ nhc_version }}
     chdir: /tmp/lbnl-nhc-{{ nhc_version }}
 
 - name: ensure sysconfig dir exists
   file: dest=/etc/sysconfig state=directory owner=root group=root mode=755
-  sudo: true
+  become: yes
 
 - name: copy nhc sysconfig script
   template: dest=/etc/sysconfig/nhc src=nhc.sysconfig.j2 mode=644
-  sudo: true
+  become: yes
 
 - name: copy cron script
   template: dest={{ nhc_dir }}/sbin/nhc_cron src=nhc_cron.j2 mode=755
-  sudo: true
+  become: yes
 
 - name: copy nhc log rotate script
   template: dest=/etc/logrotate.d/nhc src=nhclog.j2 mode=644
-  sudo: true
+  become: yes
 
 - name: check configure file
   shell: ls {{ nhc_dir }}/etc/nhc/{{ nhc_config_file }}
@@ -49,24 +46,34 @@
 
 # - name: generate config file
 #   shell: "{{ nhc_dir }}/sbin/nhc-genconf -d -c {{ nhc_dir }}/etc/nhc/{{ nhc_config_file }} CONFDIR={{ nhc_dir }}/etc/nhc"
-#   sudo: true
+#   become: yes
 #   when: generate_nhc_config_file
 
 - name: config file extension
   lineinfile: dest="{{ nhc_dir }}/etc/nhc/{{ nhc_config_file }}" line="{{ item }}"
   with_items:
     nhc_user_conf
-  sudo: true
+  become: yes
   when: nhc_user_conf is defined and generate_nhc_config_file
 
 - name: remove /var/run/user if it is in the conf file
-  sudo: true
+  become: yes
   lineinfile:
     dest: "{{ nhc_dir }}/etc/nhc/{{ nhc_config_file }}"
     regexp: '^.*\/run\/user\/.*'
     state: absent
 
+# on Rocky 9 the sshd listener shows up as "sshd: /usr/sbin/sshd -D [listener] ...",
+# which the stock check never matches, so NHC kept marking every node bad
+- name: match the Rocky 9 sshd process name
+  lineinfile:
+    dest: "{{ nhc_dir }}/etc/nhc/{{ nhc_config_file }}"
+    regexp: '^(\s*\*\s*\|\|\s*)check_ps_service -u root -S sshd\s*$'
+    line: '\1check_ps_service -u root -S -m "sshd:" sshd'
+    backrefs: yes
+  become: yes
+
 - name: start cron job
   cron: name=nhc_monitor job={{ nhc_dir }}/sbin/nhc_cron user=root minute=*/5 state=present
-  sudo: true
+  become: yes
 

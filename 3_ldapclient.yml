@@ -1,0 +1,9 @@
+# Install and configure the LDAP client (sssd) on cluster nodes
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  user: rocky
+  become: yes
+  gather_facts: true
+  vars_files:
+    - vars/ldapConfig.yml
+  roles:
+    - { role: ldapclient }

@@ -1,0 +1,140 @@
+---
+heat_template_version: 2016-10-14
+description: "A simple template to boot a cluster of desktops (LoginNode, ManagementNodes and Desktop Nodes)"
+
+parameters:
+  rocky_8_image_id:
+    type: string
+    label: Image ID
+    description: Rocky Linux 8
+    default: CHANGEME_ROCKY8_IMAGE_ID
+  ubuntu_2004_image_id:
+    type: string
+    label: Image ID
+    description: Ubuntu 20
+    default: CHANGEME_UBUNTU2004_IMAGE_ID
+  ssh_key:
+    type: string
+    default: CHANGEME_SSH_KEYPAIR
+  avz:
+    type: string
+    default: nova
+  project_name:
+    type: string
+    default: CHANGEME_PROJECT_NAME
+  flavor:
+    type: string
+    description: default flavor for cluster node
+    default: CHANGEME_FLAVOR_ID
+  count:
+    type: string
+    default: 10
+  network_id:
+    type: string
+    label: Network ID
+    description: Tenant network
+    default: CHANGEME_NETWORK_ID
+
+resources:
+  # 'heatslurmsecgroup':
+  #  type: "OS::Neutron::SecurityGroup"
+  #  properties:
+  #    name: "heatslurmsecgroup"
+  #    rules: [ { protocol: tcp,
+  #              remote_ip_prefix: "192.168.0.0/16",
+  #              port_range_min: 12000,
+  #              port_range_max: 12999},
+  #             { protocol: tcp,
+  #              remote_ip_prefix: "192.168.0.0/16",
+  #              port_range_min: 6817,
+  #              port_range_max: 6819},
+  #             { protocol: tcp,
+  #              remote_ip_prefix: "192.168.0.0/16",
+  #              port_range_min: 1019,
+  #              port_range_max: 1019}]
+
+
+  # 'heatmysqlsecgroup':
+  #  type: "OS::Neutron::SecurityGroup"
+  #  properties:
+  #    name: "heatmysqlsecgroup"
+  #    rules: [ {protocol: tcp,
+  #              remote_ip_prefix: "192.168.0.0/16",
+  #              port_range_min: 3306,
+  #              port_range_max: 3306}]
+
+  MgmtNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: 1
+    resource_def:
+      type: My::Server::MgmtNode
+      properties:
+        avz: { get_param: avz }
+        image: { get_param: rocky_8_image_id }
+        ansible_ssh_user: rocky
+        mynodename: mgmt-%index%
+        ssh_key: { get_param: ssh_key }
+        security_groups: [ default, heatslurmsecgroup, heatmysqlsecgroup,ssh ]
+        project_name: { get_param: project_name }
+
+
+  LoginNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: 1
+    resource_def:
+     type: "OS::Nova::Server"
+     properties:
+      availability_zone: { get_param: avz }
+      flavor: CHANGEME_LOGIN_FLAVOR
+      networks:
+        - network : { get_param: network_id } 
+      image: { get_param: rocky_8_image_id }
+      key_name: { get_param: ssh_key }
+      name: login-%index%
+      security_groups: [ default, heatslurmsecgroup, ssh ]
+      metadata:
+       ansible_host_groups: [ LoginNodes ]
+       ansible_ssh_user: rocky
+       project_name: { get_param: project_name }
+
+  DesktopNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: {get_param: count }
+    resource_def:
+     type: "OS::Nova::Server"
+     properties:
+      availability_zone: { get_param: avz }
+      flavor: CHANGEME_DESKTOP_FLAVOR
+      networks:
+        - network : { get_param: network_id }
+      image: { get_param: rocky_8_image_id }
+      key_name: { get_param: ssh_key }
+      name: node-%index%
+      security_groups: [ default, heatslurmsecgroup, ssh]
+      metadata:
+       ansible_host_groups: [ DesktopNodes, default_partition, rocky_partition ]
+       ansible_ssh_user: rocky
+       project_name: { get_param: project_name }
+
+  PortalNodes:
+   type: "OS::Heat::ResourceGroup"
+   properties:
+    count: 1
+    resource_def:
+     type: "OS::Nova::Server"
+     properties:
+      availability_zone: { get_param: avz }
+      networks:
+       - network : { get_param: network_id }
+      flavor: CHANGEME_PORTAL_FLAVOR
+      image: { get_param: ubuntu_2004_image_id }
+      key_name: { get_param: ssh_key }
+      name: band-portal
+      security_groups: [ default, http,ssh ]
+      metadata:
+       ansible_host_groups: [ PortalNodes, ubuntu_partition ]
+       ansible_ssh_user: ubuntu
+       project_name: { get_param: project_name }

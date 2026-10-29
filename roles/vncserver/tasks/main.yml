@@ -1,66 +1,69 @@
 ---
-#- include_vars: "{{ hostvars[ansible_hostname]['ansible_distribution'] }}_{{ ansible_architecture }}.yml"
 - include_vars: "{{ ansible_distribution }}_{{ ansible_architecture }}.yml"
 
-- include_vars: "CentOS_7_x86_64.yml"
-  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+- include_vars: "Rocky_x86_64.yml"
+  when: ansible_distribution == "Rocky" and ansible_distribution_major_version == "8"
 
-# Use mate DE on systems that have moved to gnome3, since there is no gpu acceleration by default on NeCTAR openstack
-# Trusty (Ubuntu 14.04 LTS) needs repos added. Wheezy (Debian Stable) gets mate from backports, Utopic (Ubuntu 14.10) Jessie (Debian testing) and Sid (Debian unstable) get it by default
-- name: add repos apt
-  shell: "add-apt-repository -y ppa:ubuntu-mate-dev/ppa"
-  sudo: true
-  when: ansible_distribution_release == 'trusty'
+- include_vars: "Rocky_9_x86_64.yml"
+  when: ansible_distribution == "Rocky" and ansible_distribution_major_version == "9"
 
-- name: add repos apt
-  shell: "add-apt-repository -y ppa:ubuntu-mate-dev/trusty-mate"
-  sudo: true
-  when: ansible_distribution_release == 'trusty'
-
-#- name: add epel on CentOS 7
-#  shell: rpm -iUvh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-#  sudo: true
-#  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
-#  ignore_errors: true
-
-- name: add epel on CentOS 7
+- name: add epel 
   yum:
     name: epel-release
     state: present
-  sudo: true
-  when: ansible_distribution == "CentOS" and ansible_distribution_major_version == "7"
+  become: yes
+  when: ansible_distribution == "Rocky" and ansible_distribution_major_version | int >= 8
   ignore_errors: true
 
-- name: install system packages apt
-  apt: name={{ item }} state=present update_cache=true  force=yes
-  sudo: true
-  with_items: "{{system_packages}}"
-  when: ansible_distribution == "Ubuntu"
+# must be in place before the GUI group: installing plymouth rebuilds every initramfs
+- name: keep plymouth out of the initramfs
+  copy: src=omit-plymouth.conf dest=/etc/dracut.conf.d/omit-plymouth.conf mode=0644
+  become: yes
+  when: ansible_facts['os_family'] == 'RedHat'
 
 - name: yum group installs
-  shell: yum -y group install {{ item }}
-  sudo: true
+  become: yes
+  dnf: 
+    name: "@{{ item }}"
+    state: present
   with_items: "{{system_group_packages}}"
+  when: system_group_packages is defined
+
+# the GUI group pulls in firewalld enabled; it blocks slurmd (6818) and srun
+# ports after the next reboot. The cluster relies on the OpenStack security groups.
+- name: keep firewalld off
+  become: yes
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
   when: system_group_packages is defined
 
 - name: install system packages yum
   yum: name={{ item }} state=present update_cache=yes
-  sudo: true
+  become: yes
   with_items: "{{system_packages}}"
-  when: ansible_distribution == "CentOS"
+  when: ansible_distribution == "Rocky"
+
+# package installs can rebuild the initramfs; if /boot filled up, a kernel is unbootable
+- name: check every installed kernel has a readable initramfs
+  shell: |
+    rc=0
+    for k in $(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n'); do
+      lsinitrd /boot/initramfs-$k.img >/dev/null 2>&1 || { echo "missing or broken: /boot/initramfs-$k.img"; rc=1; }
+    done
+    exit $rc
+  become: yes
+  changed_when: false
+  when: ansible_facts['os_family'] == 'RedHat'
 
 - name: force the use of mate desktop
-  template: src=vncserver.centos dest=/bin/vncserver
-  sudo: true
-  when: ansible_distribution == "CentOS"
-
-- name: force the use of mate desktop
-  template: src=vncserver.ubuntu dest=/usr/bin/vncserver
-  sudo: true
-  when: ansible_distribution == "Ubuntu"
+  template: src=vncserver.rocky dest=/bin/vncserver
+  become: yes
+  when: ansible_distribution == "Rocky"
 
 - name: modify geometry
-  replace: dest=/usr/bin/vncserver regexp='1024x768' replace='1440x900' backup=yes
-  sudo: true
-  when: ansible_distribution == "CentOS"
+  replace: dest=/bin/vncserver regexp='1024x768' replace='1440x900' backup=yes
+  become: yes
+  when: ansible_distribution == "Rocky"
 

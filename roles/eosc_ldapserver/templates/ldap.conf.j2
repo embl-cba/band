@@ -1,0 +1,14 @@
+# /etc/openldap/ldap.conf
+#
+# OpenLDAP client configuration.
+# Do NOT confuse this file with /etc/ldap.conf.
+# See ldap.conf(5) for details.
+#
+
+BASE  {{ ldapBase }}
+URI  ldap://{{ hostname }}
+TIMELIMIT 15
+TIMEOUT  20
+
+TLS_CACERTDIR	/etc/openldap/certs
+#SASL_NOCANON	on

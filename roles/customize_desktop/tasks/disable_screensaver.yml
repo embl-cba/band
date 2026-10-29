@@ -1,0 +1,32 @@
+---
+- name: Ensure dconf directories exist
+  become: yes
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  with_items:
+    - /etc/dconf/db/local.d
+    - /etc/dconf/db/local.d/locks
+
+- name: Deploy 00-screensaver configuration
+  become: yes
+  template:
+    src: 00-screensaver
+    dest: /etc/dconf/db/local.d/00-screensaver
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Deploy locks file for screensaver
+  become: yes
+  template:
+    src: locks-screensaver
+    dest: /etc/dconf/db/local.d/locks/screensaver
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update dconf database
+  command: dconf update
+  become: yes

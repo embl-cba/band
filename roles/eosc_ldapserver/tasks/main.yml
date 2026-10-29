@@ -1,0 +1,34 @@
+---
+### following this: http://itdavid.blogspot.com.au/2012/05/howto-centos-6.html
+
+- include_vars: "{{ ansible_distribution }}_{{ ansible_distribution_version }}_{{ ansible_architecture }}.yml"
+- include_vars: "{{ ansible_distribution }}.yml"
+
+#set host name
+- hostname: name={{ hostname }}
+- name: append to /etc/hosts
+  lineinfile: dest=/etc/hosts regexp="{{ hostname }}" line="127.0.0.1  {{hostname}}" owner=root group=root mode=0644  
+
+
+- name: install system packages yum
+  yum: name={{ item }} state=installed
+  become: yes
+  with_items: "{{system_packages}}"
+  when: ansible_os_family == 'RedHat'
+
+- name: make /tmp/ldap dir
+  file: path="/tmp/ldap" state=directory mode=0755
+
+
+#set ldap server without tls 
+- include_tasks: ldap_server_without_tls.yml 
+- include_tasks: ldap_server_adding_tls.yml
+- include_tasks: ldap_server_adding_users_groups.yml
+
+- name: make sure slapd start when reboot
+  command: "chkconfig slapd on"
+  become: yes
+
+
+
+

@@ -1,0 +1,136 @@
+# Basic stuff to make the nodes functionl
+# i.e. upgrade operating systems, etc
+#
+
+- hosts: '*'
+  tasks:
+  - include_vars: vars/passwords.yml
+  - include_vars: vars/names.yml
+  - include_vars: vars/ldapConfig.yml
+  - include_vars: vars/slurm.yml
+  - include_vars: vars/eosc-servers.yml
+
+
+#uncomment this to run from start
+- hosts: '*'
+  gather_facts: true
+  become: yes
+  roles:
+    #- { role: setupKnownHosts }
+  - { role: etcHosts }
+
+# generate pass: openssl passwd -6
+- hosts: 'LoginNodes:DesktopNodes:ManagementNodes'
+  tasks:
+  - name: change password
+    user: name=root password=<old hash removed>
+    become: yes
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: ntp }
+
+# set up log into different place
+- hosts: 'LoginNodes:DesktopNodes'
+  user: rocky
+  become: yes
+  #sudo_user: root
+  gather_facts: true
+  roles:
+  - log_config
+
+# Link in with our identity systems
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: ldapclient }
+  - { role: ssh-no-password-login }
+
+- hosts: "ManagementNodes:LoginNodes:DesktopNodes"
+  roles:
+  - {role: automount}
+  - {role: move_homedir}
+
+# don't move /home aside unless the share is really there
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks:
+  # listing the dir triggers autofs; findmnt then fails unless NFS is really mounted
+  - name: check the shares are mounted
+    shell: ls {{ item }}/ >/dev/null && findmnt -t nfs4 {{ item }}
+    changed_when: false
+    with_items:
+    - /nfs
+    - /scratch
+    - /vd-containers
+
+  - name: check the share has home and local/sbin
+    stat: path={{ item }}
+    register: nfs_dirs
+    failed_when: not nfs_dirs.stat.exists or not nfs_dirs.stat.isdir
+    with_items:
+    - /nfs/home
+    - /nfs/local/sbin
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: link_usr_local, source: /nfs/local/sbin, dest: /usr/local/sbin }
+  - { role: link_usr_local, source: /nfs/home, dest: /home }
+
+# Create the sql server. I haven't altered this to allow a group of hosts
+- hosts: 'ManagementNodes'
+  gather_facts: true
+  roles:
+  - { role: mysql, mysql_type: mysql_server,  mysql_root_password: "{{ sqlrootPasswd }}", mysql_user_name: slurmdb, mysql_user_host: localhost, mysql_user_db_name: slurm_acct_db, mysql_user_hosts_group: "{{ groups['ManagementNodes'] }}", mysql_user_password: "{{ slurmdb_passwd }}" }
+
+
+
+# compile and install slurm and the slurmdb for accounting
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: slurmdb-config }
+  tasks:
+  # single controller, so keep the state local; /nfs/slurmstate1 is a stale old-cluster state
+  - { name: set use shared state, set_fact: usesharedstatedir=False }
+
+- hosts: 'LoginNodes:DesktopNodes'
+  tasks:
+  - { name: set use shared state, set_fact: usesharedstatedir=False }
+
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: slurm-common }
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: slurm-start, start_slurmdbd: True, start_slurmctld: True }
+
+- hosts: 'DesktopNodes'
+  roles:
+  - { role: slurm-start, start_slurmd: True }
+
+- hosts: 'LoginNodes'
+  roles:
+  - { role: slurm-start }
+
+# make homedirectories and slurm accounts for everyone as they appear in ldap (cron job)
+- hosts: 'LoginNodes'
+  roles:
+  - {role: provision_account, provision_send_email: True}
+
+# install lmod (lua modules)
+
+- hosts: 'LoginNodes:DesktopNodes'
+  roles:
+  - { role: enable_lmod }
+
+# sets up packages to be a vnc server, to accept an SSH CA and enable the scripts that allow users to request a node
+
+- hosts: 'LoginNodes:DesktopNodes'
+  roles:
+  - { role: vncserver }
+
+- hosts: 'LoginNodes'
+  roles:
+  - {role: eosc_prepare_loginnode}
+

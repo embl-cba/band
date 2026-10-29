@@ -1,0 +1,36 @@
+- name: "Enable Challenge Response"
+  lineinfile:
+  args:
+    dest: /etc/ssh/sshd_config
+    regexp: "ChallengeResponseAuthentication no"
+    line: "ChallengeResponseAuthentication yes" 
+    backrefs: yes
+  become: yes
+  notify: 
+  - restart sshd
+  - restart ssh
+
+- name: "Enable Challenge Response"
+  lineinfile:
+  args:
+    dest: /etc/ssh/sshd_config
+    regexp: "PasswordAuthentication no"
+    line: "PasswordAuthentication yes"
+    backrefs: yes
+  become: yes
+  notify: 
+  - restart sshd
+  - restart ssh
+
+- name: "Disable Challenge Response"
+  lineinfile:
+  args:
+    dest: /etc/ssh/sshd_config
+    regexp: "PasswordAuthentication yes"
+    line: "PasswordAuthentication no"
+    backrefs: yes
+  become: yes
+  notify: 
+  - restart sshd
+  - restart ssh
+

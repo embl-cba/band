@@ -1,0 +1,22 @@
+---
+# slurmctld sends job mail (sbatch --mail-type) through MailProg=/usr/bin/mail,
+# run as SlurmUser. s-nail relays through the same SMTP account as provision_account.
+- name: install s-nail
+  dnf: name=s-nail state=present
+  become: yes
+
+- name: send mail through the SMTP relay
+  blockinfile:
+    path: /etc/s-nail.rc
+    marker: "# {mark} ANSIBLE MANAGED: SMTP relay for slurm mail"
+    block: |
+      set v15-compat
+      set mta=smtps://{{ provision_smtp_user | urlencode }}:{{ provision_smtp_password | urlencode }}@{{ provision_smtp_host }}:{{ provision_smtp_port }}
+      set smtp-auth=login
+      set from="{{ provision_mail_from }}"
+  become: yes
+
+# the relay password is in there; slurmctld (user slurm) must still read it
+- name: restrict s-nail.rc
+  file: path=/etc/s-nail.rc owner=root group=slurm mode=0640
+  become: yes

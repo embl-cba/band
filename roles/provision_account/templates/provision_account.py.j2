@@ -1,0 +1,241 @@
+#!/usr/bin/python3
+import ldap
+import traceback
+import os
+import stat
+import shutil
+import uuid
+import tempfile
+import ast
+import string
+import sys
+import subprocess
+import smtplib
+
+from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import hashlib
+import json
+import errno
+
+DRY_RUN = '--dry-run' in sys.argv
+SEND_EMAIL = {{ provision_send_email | bool }}
+SMTP_HOST = {{ provision_smtp_host | to_json }}
+SMTP_PORT = {{ provision_smtp_port | int }}
+SMTP_USER = {{ provision_smtp_user | to_json }}
+SMTP_PASSWORD = {{ provision_smtp_password | to_json }}
+MAIL_FROM = {{ provision_mail_from | to_json }}
+SACCTMGR = '{{ slurm_dir }}/bin/sacctmgr'
+LDAP_CACERT = '{{ ldapCaCertFile }}'
+
+class ldapSearchConfig:
+    def __init__(self):
+        self.ldapserver=""
+        self.binddn=""
+        self.bindpw=""
+        self.baseDN=""
+        self.searchFilter=""
+        self.cacertfile=''
+
+class genericUser:
+    def __init__(self):
+        self.dn=""
+        self.cn=""
+        self.entry=""
+        self.uid=""
+
+
+def get_users(server):
+    ldap.set_option(ldap.OPT_X_TLS_CACERTFILE, LDAP_CACERT)
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_DEMAND)
+    ldap.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
+    l=ldap.initialize(server.ldapserver)
+    l.simple_bind_s(server.binddn,server.bindpw)
+    retrieveAttributes = ["*"]
+    searchScope=ldap.SCOPE_SUBTREE
+    try:
+        ldap_result_id = l.search(server.baseDN,searchScope,server.searchFilter,retrieveAttributes)
+    except ldap.LDAPError:
+        raise
+    rtype,rdata = l.result(ldap_result_id,1)
+    allusers={}
+    for user in rdata:
+        dn=user[0]
+        attrs=user[1]
+        allusers[dn]=genericUser()
+        allusers[dn].dn=dn
+        allusers[dn].entry=attrs
+    return allusers
+
+
+
+def write_desktop_file(desktop_path, launchername, execpath, name, icon):
+    _file = open(desktop_path + "/" + launchername, "w")
+    _file.write("#!/usr/bin/env xdg-open\n"\
+                 "[Desktop Entry]\n"\
+                 "Version=1.0\n"\
+                 "Type=Application\n"\
+                 "Terminal=false\n")
+    _file.write("Exec=%s\n"%(execpath))
+    _file.write("Name=%s\n"%(name))
+    _file.write("Icon=%s\n"%(icon))
+    _file.close()
+
+
+def write_desktop_file_folder(desktop_path, launchername, type, url, name, icon):
+    _file = open(desktop_path + "/" + launchername, "w")
+    _file.write("#!/usr/bin/env xdg-open\n"\
+                 "[Desktop Entry]\n"\
+                 "Version=1.0\n")
+
+    _file.write("Type=%s\n"%(type))
+    _file.write("URL=%s\n"%(url))
+    _file.write("Name=%s\n"%(name))
+    _file.write("Icon=%s\n"%(icon))
+    _file.close()
+
+def write_vnc_xstart(path):
+    filename=path + "/.vnc/xstartup"
+    if not os.path.exists(os.path.dirname(filename)):
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+    with open(filename,"w") as f:
+        f.write("#!/bin/sh\n")
+        f.write("unset SESSION_MANAGER\n")
+        f.write("unset DBUS_SESSION_BUS_ADDRESS\n")
+        f.write("exec mate-session\n")
+        f.close()
+
+    os.chmod(filename,755)
+
+def mk_desktop(username, path):
+    #create desktop if not exists
+    desktop_path = path + "/Desktop"
+    os.mkdir(desktop_path,int("0755",8))
+    workshop_lic = path + "/.workshop-lic"
+    os.mkdir(workshop_lic,int("0777",8))
+    #write_desktop_file(desktop_path, "launcherrstudio.desktop", "/usr/lib/rstudio/bin/rstudio", "Rstudio", "rstudio")
+
+
+def mk_homedir(username, path, uidNumber, gidNumber):
+    # /home on the share is world-writable: never follow symlinks or chown a
+    # tree someone else may have prepared, only the home directory itself
+    path = decode_if_bytes(path)
+    try:
+        statinfo = os.lstat(path)
+    except FileNotFoundError:
+        print("create home %s" % path)
+        if not DRY_RUN:
+            os.mkdir(path, 0o700)
+            os.lchown(path, uidNumber, gidNumber)
+        return
+    if not stat.S_ISDIR(statinfo.st_mode):
+        raise Exception("users home directory is not a directory %s" % path)
+    if statinfo.st_gid != gidNumber or statinfo.st_uid != uidNumber:
+        print("fix owner of %s (was %d:%d)" % (path, statinfo.st_uid, statinfo.st_gid))
+        if not DRY_RUN:
+            fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                os.fchown(fd, uidNumber, gidNumber)
+            finally:
+                os.close(fd)
+
+def mk_slurmaccount(acct):
+    output = subprocess.check_output([SACCTMGR, "--noheader", "--parsable2", "list", "account", "format=account"]).decode('utf-8')
+    if acct in output.split():
+        return
+    print("create slurm account %s" % acct)
+    if not DRY_RUN:
+        subprocess.check_call([SACCTMGR, "-i", "create", "account", acct])
+
+def mk_slurmuser(userobj, acct):
+    user = decode_if_bytes(userobj.entry['uid'][0])
+    output = subprocess.check_output([SACCTMGR, "--noheader", "--parsable2", "list", "Association",
+                                      "user=%s" % user, "format=account"]).decode('utf-8')
+    if acct in [item.strip() for item in output.splitlines()]:
+        return
+    print("create slurm user %s in account %s" % (user, acct))
+    if not DRY_RUN:
+        subprocess.check_call([SACCTMGR, "-i", "create", "user", user, "account=%s" % acct, "DefaultAccount=%s" % acct])
+        if SEND_EMAIL:
+            send_email(userobj)
+
+def mk_share_folders(username,uidNumber,gidNumber):
+    """
+    Make shared folders - data and workflow
+    """
+    path_data = "/home/public_share_data/"+username
+    try:
+        statinfo = os.stat(path_data)
+    except OSError as e:
+        if 'No such file or directory' in e:
+            os.mkdir(path_data,int("0755",8))
+    os.chown(path_data, uidNumber, gidNumber)
+
+
+def decode_if_bytes(val):
+    return val.decode('utf-8') if isinstance(val, bytes) else val
+
+def send_email(user):
+    fromaddr=MAIL_FROM
+    ntoaddr=decode_if_bytes(user.entry.get('mail',[None])[0])
+    fn=decode_if_bytes(user.entry.get('givenName',[b''])[0])
+    sn=decode_if_bytes(user.entry.get('sn',[b''])[0])
+
+    toaddr=ntoaddr
+    #fn="Yi"
+    #sn="Sun"
+    msg= MIMEMultipart()
+    msg['From']=fromaddr
+    msg['To']=toaddr
+#    msg['CC']="<admin address>"
+    msg['Subject']="Your Account"
+
+    body = ( "Dear "+ fn+" "+sn+"\n\n"
+             "Your BAND Desktop account has been created.\n"
+             "You can now launch desktops.\n\n"
+             "Regards,\n"
+             "EMBL CBBCS Team"
+           )
+    msg.attach(MIMEText(body,'plain'))
+
+    server = smtplib.SMTP_SSL(SMTP_HOST,SMTP_PORT)
+    if SMTP_USER:
+        server.login(SMTP_USER, SMTP_PASSWORD)
+    text= msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
+
+#print("Checking new accounts:")
+s=ldapSearchConfig()
+s.ldapserver="{{ ldapURI }}".strip()
+s.binddn="{{ ldapBindDN }}".strip()
+s.bindpw="{{ ldapBindDNPassword }}"
+s.baseDN="{{ ldapBase }}".strip()
+s.searchFilter = "{{ search_filter }}".strip()
+homeDirEntry= "homeDirectory"
+
+
+users=get_users(s)
+
+mk_slurmaccount("{{ provision_slurm_account }}")
+failed = 0
+for user in users:
+    try:
+        #print user
+        mk_homedir(users[user].entry['cn'][0],users[user].entry[homeDirEntry][0],int(users[user].entry['uidNumber'][0]),int(users[user].entry['gidNumber'][0]))
+        mk_slurmuser(users[user],"{{ provision_slurm_account }}")
+        #mk_share_folders(users[user].entry['cn'][0],int(users[user].entry['uidNumber'][0]),int(users[user].entry['gidNumber'][0]))
+
+    except:
+        failed += 1
+        print (traceback.format_exc())
+        pass
+print(datetime.today().strftime("%Y-%m-%d %H:%M:%S"))
+print("Done. %d LDAP users, %d failed%s" % (len(users), failed, " (dry run)" if DRY_RUN else ""))
+sys.exit(1 if failed else 0)

@@ -1,4 +1,4 @@
 ---
 - name: "Restart MySQL" 
   service: name={{ sqlServiceName }} state=restarted
-  sudo: true
+  become: yes

@@ -5,4 +5,4 @@
     - bind-utils
     - nfs-utils
   yum: "name={{ item }} state=present"
-  sudo: true
+  become: yes

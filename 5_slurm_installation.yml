@@ -1,0 +1,45 @@
+# Step 5, Slurm only: /etc/hosts, MariaDB + slurmdbd + slurmctld on mgmt-0, munge and the
+# Slurm client on login-0, slurmd on the desktop nodes.
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks:
+  - include_vars: vars/passwords.yml
+  - include_vars: vars/names.yml
+  - include_vars: vars/slurm.yml
+
+# slurm needs every node to resolve every other node by name
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  gather_facts: true
+  become: yes
+  roles:
+  - { role: etcHosts }
+
+- hosts: 'ManagementNodes'
+  gather_facts: true
+  roles:
+  - { role: mysql, mysql_type: mysql_server,  mysql_root_password: "{{ sqlrootPasswd }}", mysql_user_name: slurmdb, mysql_user_host: localhost, mysql_user_db_name: slurm_acct_db, mysql_user_hosts_group: "{{ groups['ManagementNodes'] }}", mysql_user_password: "{{ slurmdb_passwd }}" }
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: slurmdb-config }
+
+# single controller, so keep the state local; /nfs/slurmstate1 is a stale old-cluster state
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks:
+  - { name: set use shared state, set_fact: usesharedstatedir=False }
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: slurm-common }
+
+- hosts: 'ManagementNodes'
+  roles:
+  - { role: slurm-start, start_slurmdbd: True, start_slurmctld: True }
+
+- hosts: 'DesktopNodes'
+  roles:
+  - { role: slurm-start, start_slurmd: True }
+
+- hosts: 'LoginNodes'
+  roles:
+  - { role: slurm-start }

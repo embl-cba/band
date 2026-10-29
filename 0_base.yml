@@ -1,0 +1,33 @@
+# Step 0, base settings on the cluster nodes: /etc/hosts, root password, time
+# sync, sshd password-login settings. Logging stays as Rocky 9 ships it
+# (the old log_config role would break logrotate).
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks:
+  - include_vars: vars/names.yml
+  - include_vars: vars/passwords.yml
+  tags: always
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  gather_facts: true
+  become: yes
+  roles:
+  - { role: etcHosts }
+
+# root password for the OpenStack console (ssh password login stays off).
+# Hash in vars/passwords.yml as root_password_hash; make one with: openssl passwd -6
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  tasks:
+  - name: check the root password hash is set
+    assert:
+      that: root_password_hash is defined and root_password_hash is match('^\$6\$')
+      fail_msg: "set root_password_hash (SHA-512, from 'openssl passwd -6') in vars/passwords.yml"
+  - name: change password
+    user: name=root password={{ root_password_hash }}
+    become: yes
+  tags: rootpw
+
+- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  roles:
+  - { role: ntp }
+  - { role: ssh-no-password-login }

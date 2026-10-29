@@ -1,0 +1,40 @@
+dn: {{ testDN }}
+uid: {{ testName }}
+gecos: Test User
+objectClass: top
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+userPassword: {{ testPasswordHash.stdout }} 
+sn: test
+cn: {{ testName }}
+shadowLastChange: 15140
+shadowMin: 0
+shadowMax: 99999
+shadowWarning: 7
+loginShell: /bin/bash
+uidNumber: 1001
+gidNumber: 1102
+homeDirectory: /home/{{ testName }}
+mail: test@example.org
+
+
+dn: {{ ldapBindDN }}
+uid: {{ ldapBindName }}
+gecos: {{ ldapBindName }}
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+userPassword: {{ bindDnHash.stdout }}
+shadowLastChange: 15140
+shadowMin: 0
+shadowMax: 99999
+shadowWarning: 7
+loginShell: /bin/bash
+uidNumber: 1002
+gidNumber: 1101
+homeDirectory: /home/{{ ldapBindName }}
+
+
+

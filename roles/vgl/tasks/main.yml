@@ -1,0 +1,76 @@
+---
+# EGL back end: VirtualGL talks to the GPU directly, no GDM/Xorg on the nodes.
+- name: Add the official VirtualGL repository
+  yum_repository:
+    name: VirtualGL
+    description: VirtualGL official RPMs
+    baseurl: https://packagecloud.io/dcommander/virtualgl/rpm_any/rpm_any/$basearch
+    gpgcheck: yes
+    repo_gpgcheck: yes
+    gpgkey:
+      - https://packagecloud.io/dcommander/virtualgl/gpgkey
+      - https://raw.githubusercontent.com/VirtualGL/repo/main/VGL-GPG-KEY
+
+- name: Install VirtualGL
+  dnf:
+    name: VirtualGL-{{ vgl_version }}
+    state: present
+
+- name: Check whether VirtualGL is configured
+  stat:
+    path: /etc/udev/rules.d/99-virtualgl-dri.rules
+  register: vgl_configured
+
+# vglserver_config reloads the nvidia modules to apply device permissions,
+# which fails while nvidia-persistenced holds them
+- name: Configure VirtualGL
+  when: not vgl_configured.stat.exists
+  block:
+  - name: Stop nvidia-persistenced
+    systemd:
+      name: nvidia-persistenced
+      state: stopped
+
+  # +s/+f: all users (LDAP users are not in a vglusers group)
+  - name: Run vglserver_config for the EGL back end
+    command: vglserver_config +egl +s +f
+    register: vgl_config
+    failed_when: vgl_config.rc != 0 or 'IMPORTANT NOTE' in vgl_config.stdout
+
+  always:
+  - name: Start nvidia-persistenced
+    systemd:
+      name: nvidia-persistenced
+      state: started
+
+# the nodes also have a virtio_gpu card, so point VirtualGL at the V100 explicitly
+- name: Find the NVIDIA DRI device
+  shell: ls -d /sys/bus/pci/drivers/nvidia/0000:* | head -1 | xargs basename
+  register: nvidia_pci
+  changed_when: false
+
+- name: Check the NVIDIA DRI device exists
+  stat:
+    path: /dev/dri/by-path/pci-{{ nvidia_pci.stdout }}-card
+  register: vgl_dev
+  failed_when: not vgl_dev.stat.exists
+
+- name: Set the default VirtualGL device for all users
+  template:
+    src: "{{ item }}.j2"
+    dest: /etc/profile.d/{{ item }}
+    mode: '0644'
+  loop:
+    - virtualgl.sh
+    - virtualgl.csh
+
+# as a normal user, so it also proves the device permissions work for everyone
+- name: Check VirtualGL can render on the V100
+  shell: /opt/VirtualGL/bin/eglinfo $(readlink -f /dev/dri/by-path/pci-{{ nvidia_pci.stdout }}-card) -B
+  become_user: "{{ ansible_ssh_user }}"
+  register: vgl_eglinfo
+  changed_when: false
+  failed_when: vgl_eglinfo.rc != 0 or 'V100' not in vgl_eglinfo.stdout
+
+- debug:
+    msg: "{{ vgl_eglinfo.stdout_lines | select('search', 'renderer|version string') | list }}"

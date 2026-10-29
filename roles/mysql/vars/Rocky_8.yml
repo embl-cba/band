@@ -1,0 +1,11 @@
+server_packages:
+  - python3-PyMySQL
+  - mariadb-server
+  - mariadb-devel 
+
+client_packages:
+  - mariadb
+  - python3-PyMySQL
+  - mariadb-devel
+sqlServiceName: mariadb
+mysql_socket: /var/lib/mysql/mysql.sock

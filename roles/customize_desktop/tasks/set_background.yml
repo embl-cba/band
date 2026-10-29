@@ -1,0 +1,27 @@
+---
+- name: Copy background image
+  become: yes
+  copy:
+    src: "{{wallpaper_image}}"
+    dest: "/usr/share/backgrounds/{{wallpaper_image}}"
+    mode: '0644'
+
+- name: Set system-wide desktop background
+  become: yes
+  copy:
+    dest: /etc/dconf/db/local.d/00-background
+    content: |
+      [org/gnome/desktop/background]
+      picture-uri='file:///usr/share/backgrounds/{{wallpaper_image}}'
+
+- name: Lock desktop background setting
+  become: yes
+  copy:
+    dest: /etc/dconf/db/local.d/locks/background
+    content: |
+      /org/gnome/desktop/background/picture-uri
+
+- name: Update dconf database
+  command: dconf update
+  become: yes
+

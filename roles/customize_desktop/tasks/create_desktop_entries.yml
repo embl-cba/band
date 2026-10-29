@@ -1,0 +1,17 @@
+- name: Copy all icons 
+  become: yes
+  copy:
+    src: "{{ item.icon }}"
+    dest: "/usr/share/pixmaps/{{ item.icon }}"
+    mode: '0644'
+  loop: "{{ gnome_apps }}"
+
+- name: Deploy .desktop files from templates
+  become: yes
+  template:
+    src: "{{ item.desktop_base }}.desktop.j2"
+    dest: "/usr/share/applications/{{ item.desktop_base }}.desktop"
+    mode: '0644'
+  loop: "{{ gnome_desktop_files }}"
+  loop_control:
+    label: "{{ item.desktop_base }}"
