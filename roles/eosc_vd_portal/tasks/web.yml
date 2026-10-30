@@ -1,0 +1,72 @@
+---
+# The static front end, served by nginx on port 80. TLS and the routing of
+# /client, /guacamole, /kc and /grouprs are done by the reverse proxy.
+- name: Create /var/www/html/eosc-js-<version>
+  file:
+    path: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: unpack the front end
+  unarchive:
+    src: "eosc-js.{{ eosc_js_version }}.tar.gz"
+    dest: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    extra_opts: [--strip-components=1, --no-same-owner]
+    creates: "/var/www/html/eosc-js-{{eosc_js_version}}/index.html"
+  become: yes
+
+- name: drop editor backups shipped in the tarball
+  file:
+    path: "/var/www/html/eosc-js-{{eosc_js_version}}/eosc-landingpage/eosc-landingpage.html~"
+    state: absent
+  become: yes
+
+# app.js has the portal's public name for the API base URLs
+- name: point the front end at this portal
+  replace:
+    path: "/var/www/html/eosc-js-{{eosc_js_version}}/app.js"
+    regexp: "https://[^/']+/(kc|grouprs)/"
+    replace: "https://{{ eosc_portal_hostname }}/\\1/"
+  become: yes
+
+- name: symlink /var/www/html/eosc-js to the current version
+  file:
+    src: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    dest: /var/www/html/eosc-js
+    owner: root
+    group: root
+    state: link
+    force: yes
+  become: yes
+
+- name: nginx site for the front end
+  template:
+    src: nginx-portal.conf.j2
+    dest: /etc/nginx/sites-available/band-portal
+    owner: root
+    mode: '0644'
+  become: yes
+  notify: reload nginx
+
+- name: enable the site
+  file:
+    src: /etc/nginx/sites-available/band-portal
+    dest: /etc/nginx/sites-enabled/band-portal
+    state: link
+  become: yes
+  notify: reload nginx
+
+- name: disable nginx's default site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  become: yes
+  notify: reload nginx
+
+- name: nginx running
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+  become: yes

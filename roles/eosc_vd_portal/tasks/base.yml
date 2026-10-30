@@ -1,0 +1,48 @@
+---
+# Base system: packages, docker and MongoDB.
+- name: Installing packages for the portal
+  apt:
+    name: "{{ portal_packages }}"
+    update_cache: yes
+    cache_valid_time: 3600
+    state: present
+  become: yes
+
+- name: docker is running and enabled
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+
+# client.war keeps its token and preference caches in MongoDB, through
+# mongo-java-driver 3.3.0; MongoDB 6.0 and later refuse drivers that old, so
+# run the same 3.6 the previous portal had. Reachable from this host only.
+- name: MongoDB data directory
+  file:
+    path: "{{ portal_mongodb_data }}"
+    state: directory
+    mode: '0700'
+  become: yes
+
+- name: MongoDB container
+  community.docker.docker_container:
+    name: mongodb
+    image: "mongo:{{ portal_mongodb_version }}"
+    state: started
+    restart_policy: unless-stopped
+    published_ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - "{{ portal_mongodb_data }}:/data/db"
+  become: yes
+
+- name: MongoDB answers
+  command: >-
+    docker exec mongodb mongo --quiet --eval 'db.adminCommand({ping: 1}).ok'
+  register: mongo_ping
+  until: mongo_ping.stdout == "1"
+  retries: 10
+  delay: 3
+  changed_when: false
+  become: yes

@@ -1,12 +1,20 @@
 [Unit]
-Description=EOSC Group Resource Server
+Description=eosc group resource server (LDAP groups for the group manager)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=forking
-ExecStart={{eosc_dir}}/eosc-group-rs -p {{group_resource_server_port}} -s eosc_group_security.properties
-KillMode=process
-User=root
-Group=root
+Type=simple
+User=eosc
+Group=eosc
+UMask=0077
+WorkingDirectory={{ eosc_dir }}
+# it reads eosc_grouprs_security.properties from the working directory (LDAP,
+# mail) and the OIDC settings from -s; -H defaults to localhost
+ExecStart=/usr/bin/java -jar {{ eosc_dir }}/eosc-group-rs-{{ gr_resource_server_version }}.jar -p {{ group_resource_server_port }} -H 0.0.0.0 -s eosc_grouprs_security.properties
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

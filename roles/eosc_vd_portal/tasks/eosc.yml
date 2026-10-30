@@ -1,0 +1,133 @@
+---
+# /opt/eosc: the resource server (eosc-rs, :9001, runs the eosc.json commands
+# on the login node over ssh with certificates signed by the portal's CA) and
+# the group resource server (eosc-group-rs, :9002, LDAP groups). Both run as
+# user eosc, not root.
+- name: eosc group
+  group:
+    name: eosc
+    system: yes
+  become: yes
+
+- name: eosc user
+  user:
+    name: eosc
+    group: eosc
+    system: yes
+    home: "{{ eosc_dir }}"
+    create_home: no
+    shell: /usr/sbin/nologin
+  register: eosc_user
+  become: yes
+
+- name: "{{ eosc_dir }}"
+  file:
+    path: "{{ eosc_dir }}"
+    state: directory
+    owner: root
+    group: eosc
+    mode: '0755'
+  become: yes
+
+# per-login ssh keys and certificates live here, in memory only
+- name: tmpfs for per-user keys and certificates
+  mount:
+    path: "{{ temp_dir }}"
+    src: tmpfs
+    fstype: tmpfs
+    opts: "size=200M,mode=0700,uid={{ eosc_user.uid }},gid={{ eosc_user.group }}"
+    state: mounted
+  become: yes
+
+######## the CA that signs the users' ssh certificates
+- name: CA directory
+  file:
+    path: "{{ eosc_ssh_ca_dir }}"
+    state: directory
+    owner: eosc
+    group: eosc
+    mode: '0700'
+  become: yes
+
+- name: CA private key (vaulted in the repo)
+  copy:
+    src: server_ca
+    dest: "{{ eosc_ssh_ca_dir }}/server_ca"
+    owner: eosc
+    group: eosc
+    mode: '0600'
+  become: yes
+  notify: restart eosc-rs
+
+- name: CA public key
+  copy:
+    src: server_ca.pub
+    dest: "{{ eosc_ssh_ca_dir }}/server_ca.pub"
+    owner: eosc
+    group: eosc
+    mode: '0644'
+  become: yes
+  notify: restart eosc-rs
+
+######## config
+- name: eosc.json (commands run on the cluster)
+  template:
+    src: eosc.json.j2
+    dest: "{{ eosc_dir }}/eosc.json"
+    owner: root
+    group: eosc
+    mode: '0644'
+  become: yes
+  notify: restart eosc-rs
+
+- name: properties of both servers (OIDC, CA passphrase, LDAP, mail)
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ eosc_dir }}/{{ item }}"
+    owner: root
+    group: eosc
+    mode: '0640'
+  loop:
+    - eosc_security.properties
+    - eosc_grouprs_security.properties
+  become: yes
+  notify:
+    - restart eosc-rs
+    - restart eosc-group-rs
+
+######## jars and services
+- name: server jars
+  copy:
+    src: "{{ item }}"
+    dest: "{{ eosc_dir }}/{{ item }}"
+    owner: root
+    group: eosc
+    mode: '0644'
+  loop:
+    - "resource-server-{{ resource_server_version }}.jar"
+    - "eosc-group-rs-{{ gr_resource_server_version }}.jar"
+  become: yes
+  notify:
+    - restart eosc-rs
+    - restart eosc-group-rs
+
+- name: systemd units
+  template:
+    src: "{{ item }}.service.j2"
+    dest: "/etc/systemd/system/{{ item }}.service"
+    owner: root
+    mode: '0644'
+  loop: [eosc-rs, eosc-group-rs]
+  become: yes
+  notify:
+    - restart eosc-rs
+    - restart eosc-group-rs
+
+- name: services enabled and started
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  loop: [eosc-rs, eosc-group-rs]
+  become: yes

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- context of /client: override web.xml's log4jConfiguration, which points
+     at /opt/coesra/coesra.log4j2.xml (left over from the code's origin) -->
+<Context>
+  <Parameter name="log4jConfiguration"
+             value="file://{{ eosc_dir }}/eosc.log4j2.xml"
+             override="false"/>
+</Context>

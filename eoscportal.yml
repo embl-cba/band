@@ -1,61 +1,11 @@
 - hosts: '*'
   tasks:
   - include_vars: vars/eosc-portal.yml
+    tags: always
   - include_vars: vars/ldapConfig.yml
+    tags: always
 
-#### system tools
-
-- hosts: 'PortalNodes'
-  tasks:
-  - name: Create /opt/eosc if not exists
-    become: yes
-    file:
-      path: "{{eosc_dir}}"
-      state: directory
-      mode: '0755'
-      
-  - name: Create eosc_ssh_ca_dir if not exists
-    become: yes
-    file:
-      path: "{{eosc_ssh_ca_dir}}"
-      state: directory
-      mode: '0755'
-
-# - name: Check for /root/server_ca exists   
-#    become: yes
-#    stat: 
-#      path: /root/server_ca 
-#    register: stat_result
-
-#  - name: generate server_ca
-#    command: ssh-keygen -b 4096 -f /root/server_ca -N "{{ca_pass_prase}}"
-#    run_once: true
-#    become: yes
-#    when: stat_result.stat.exists == False 
-
-#  - name: copy /root/server_ca.pub and /root/server_ca to local
-#    fetch:
-#      src: "{{item.src}}"
-#      dest: "{{item.dest}}"
-#      mode: "{{item.mode}}"
-#      flat: yes
-#    run_once: true
-#    become: yes
-#    with_items:
-#      - { src: "/root/server_ca", dest: "files/", mode: '0600'}
-#      - { src: "/root/server_ca.pub",dest: "files/", mode: '0644'}      
-
-  - name: copy /root/server_ca.pub and /root/server_ca to portal nodes
-    copy:
-      src: "{{item.src}}"
-      dest: "{{item.dest}}"
-      mode: "{{item.mode}}"
-    become: yes
-    with_items:
-      - { src: "files/server_ca", dest: "{{eosc_ssh_ca_dir}}/server_ca", mode: '0600'}
-      - { src: "files/server_ca.pub",dest: "{{eosc_ssh_ca_dir}}/server_ca.pub", mode: '0644'}
-  
-      
+# /opt/eosc and the CA are set up by the eosc_vd_portal role (tasks/eosc.yml)
 
 - hosts: 'LoginNodes:DesktopNodes'
   roles:

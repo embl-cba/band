@@ -1,0 +1,23 @@
+---
+# guacd, same version as the Guacamole web app. Host networking: it connects
+# to the VNC tunnels that the resource server opens on this host's localhost.
+# It only listens on localhost, where Tomcat reaches it.
+- name: guacd container
+  community.docker.docker_container:
+    name: guacd
+    image: "guacamole/guacd:{{ guacamole_version }}"
+    state: started
+    restart_policy: unless-stopped
+    network_mode: host
+    # the image's entrypoint runs "guacd -f -b 0.0.0.0 -L <level>" and appends
+    # these arguments; the later -b wins
+    command: ["-b", "127.0.0.1", "-l", "{{ guad_port }}"]
+    env:
+      LOG_LEVEL: info
+  become: yes
+
+- name: guacd listens
+  wait_for:
+    host: 127.0.0.1
+    port: "{{ guad_port }}"
+    timeout: 60

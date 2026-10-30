@@ -1,12 +1,19 @@
 [Unit]
-Description=eosc Resource Server
+Description=eosc resource server (runs the portal's commands on the cluster)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=forking
-ExecStart={{eosc_dir}}/eosc-rs -p {{resource_server_port}} -P HTTP/1.1  -f eosc.json -h {{login_host}} -s eosc_security.properties -t {{eosc_dir}}/tmpfs -r /kc
-KillMode=process
-User=root
-Group=root
+Type=simple
+User=eosc
+Group=eosc
+UMask=0077
+WorkingDirectory={{ eosc_dir }}
+# -h login node, -H listen address, -t tmpfs for per-user keys, -r URL prefix
+ExecStart=/usr/bin/java -jar {{ eosc_dir }}/resource-server-{{ resource_server_version }}.jar -p {{ resource_server_port }} -P HTTP/1.1 -f eosc.json -h {{ login_host }} -H 0.0.0.0 -s eosc_security.properties -t {{ temp_dir }} -r /kc
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target

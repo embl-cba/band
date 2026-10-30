@@ -1,6 +1,9 @@
 ### tomcat
-apache_tomcat_version: 9.0.102
-apache_tomcat_url: "https://dlcdn.apache.org/tomcat/tomcat-9/v{{apache_tomcat_version}}/bin/apache-tomcat-{{apache_tomcat_version}}.tar.gz"
+# Tomcat 9 (javax.servlet; client.war does not run on 10). archive.apache.org
+# keeps every release; sha512 from Apache, signature checked with Tomcat's KEYS
+apache_tomcat_version: 9.0.123
+apache_tomcat_url: "https://archive.apache.org/dist/tomcat/tomcat-9/v{{apache_tomcat_version}}/bin/apache-tomcat-{{apache_tomcat_version}}.tar.gz"
+apache_tomcat_sha512: 64b1130e719399c0a409e6996081433b16af8d9c89266c7aaa9849af70a1815feca91e13896f5ccc41451dc5759716d1c84882682de955822c30509de102f290
   
 
 ### portal client: the build running on the tubi portal since 2024-11, with
@@ -23,6 +26,20 @@ eosc_js_version: tubi.20261030
 ### (sha256 checked against archive.apache.org); guacd must be the same version
 guacamole_version: 1.6.0
 
+### eosc.json: Slurm commands on the login node (becomes /opt/slurm/bin once
+### that symlink exists on the cluster)
+portal_slurm_bin: /opt/slurm-25.11.4/bin
+### desktop sizes offered by the portal (nodes: 8 CPUs, 82 GB, 1 GPU each)
+portal_desktop:
+  ppn:   {default: 2,   min: 1, max: 8}
+  mem:   {default: 4,   min: 1, max: 80}     # GB
+  gpu:   {default: 0,   min: 0, max: 1}
+  hours: {default: 120, min: 1, max: 336}
+
+### MongoDB for client.war (docker, see tasks/base.yml)
+portal_mongodb_version: "3.6"
+portal_mongodb_data: /var/lib/mongodb-docker
+
 ### guacamole home
 guacamole_home: /etc/guacamole
 
@@ -30,6 +47,7 @@ guacamole_home: /etc/guacamole
 massive_plugin_version: 1.6.0
 ## gson 2.4
 gson_24_url: https://repo1.maven.org/maven2/com/google/code/gson/gson/2.4/gson-2.4.jar
+gson_24_sha256: a35abbcf689eb3d60a2959e83a624831658b023220cd2edb66350993ebfdc025
 
 ### tomcat dir
 tomcat_dir: /opt/apache-tomcat

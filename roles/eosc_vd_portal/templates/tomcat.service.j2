@@ -1,12 +1,20 @@
 [Unit]
-Description=Tomcat
+Description=Tomcat (portal client, Guacamole)
+After=network.target docker.service
 
 [Service]
-Type=forking
-ExecStart={{tomcat_dir}}/bin/startup.sh
-KillMode=process
-User=root
-Group=root
+Type=simple
+User=tomcat
+Group=tomcat
+UMask=0027
+Environment=CATALINA_HOME={{ tomcat_dir }}
+Environment=CATALINA_BASE={{ tomcat_dir }}
+Environment=GUACAMOLE_HOME={{ guacamole_home }}
+# foreground, so the output (incl. the client's log4j console log) goes to
+# the journal: journalctl -u tomcat
+ExecStart={{ tomcat_dir }}/bin/catalina.sh run
+SuccessExitStatus=143
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

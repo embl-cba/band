@@ -1,0 +1,11 @@
+---
+# guacd and MongoDB run in docker (see tasks/base.yml), so none of the
+# build dependencies of the older lists are needed
+portal_packages:
+  - openjdk-11-jre-headless   # resource servers (Spring Boot 1.5) and Tomcat 9
+  - nginx
+  - docker.io
+  - python3-docker            # for the community.docker modules
+  - unzip
+  - ca-certificates
+  - curl

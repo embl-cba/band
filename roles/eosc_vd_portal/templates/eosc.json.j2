@@ -1,3 +1,5 @@
+{# Commands the resource server (eosc-rs) runs for the web front end.
+   Slurm path and desktop limits come from roles/eosc_vd_portal/vars/main.yml #}
 [
     [
         "EOSC"
@@ -7,32 +9,32 @@
             "username": null,
             "loginHost": null,
             "defaults": {
-                "jobParams_hours": 120,
-                "jobParams_mem": 4,
-                "jobParams_ppn": 2,
-                "jobParams_gpu": 0
+                "jobParams_hours": {{ portal_desktop.hours.default }},
+                "jobParams_mem": {{ portal_desktop.mem.default }},
+                "jobParams_ppn": {{ portal_desktop.ppn.default }},
+                "jobParams_gpu": {{ portal_desktop.gpu.default }}
             },
             "directConnect": true,
             "siteRanges": {
                 "jobParams_hours": [
-                    1,
-                    336
+                    {{ portal_desktop.hours.min }},
+                    {{ portal_desktop.hours.max }}
                 ],
                 "jobParams_mem": [
-                    1,
-                    7
+                    {{ portal_desktop.mem.min }},
+                    {{ portal_desktop.mem.max }}
                 ],
                 "jobParams_nodes": [
                     1,
-                    10
+                    1
                 ],
                 "jobParams_ppn": [
-                    1,
-                    4
+                    {{ portal_desktop.ppn.min }},
+                    {{ portal_desktop.ppn.max }}
                 ],
                 "jobParams_gpu": [
-                    0,
-                    1
+                    {{ portal_desktop.gpu.min }},
+                    {{ portal_desktop.gpu.max }}
                 ]
             },
             "messageRegexs": [
@@ -49,12 +51,14 @@
             "Commands": {
                 "exists": {
                     "async": false,
-                    "cmd": "if [ -d $HOME ] && /opt/slurm-25.11.4/bin/sacctmgr list user format=User%-50 | grep --quiet `whoami`; then echo true; else echo false; fi",
+                    "cmd": "if [ -d $HOME ] && {{ portal_slurm_bin }}/sacctmgr list user format=User%-50 | grep --quiet `whoami`; then echo true; else echo false; fi",
                     "failFatal": true,
                     "formatFatal": false,
                     "host": "login",
                     "loop": false,
-                    "regex": [ "^(true|false)$" ],
+                    "regex": [
+                        "^(true|false)$"
+                    ],
                     "requireMatch": true
                 },
                 "agent": {
@@ -71,7 +75,7 @@
                 },
                 "execHost": {
                     "async": false,
-                    "cmd": "\"/opt/slurm-25.11.4/bin/squeue -j {jobidNumber} -o \"%N\" | tail -n -1 | cut -f 1 -d ',' | xargs -iname getent hosts name | cut -f 1 -d ' ' \"",
+                    "cmd": "\"{{ portal_slurm_bin }}/squeue -j {jobidNumber} -o \"%N\" | tail -n -1 | cut -f 1 -d ',' | xargs -iname getent hosts name | cut -f 1 -d ' ' \"",
                     "failFatal": true,
                     "formatFatal": false,
                     "host": "login",
@@ -95,7 +99,7 @@
                 },
                 "listAll": {
                     "async": false,
-                    "cmd": "/opt/slurm-25.11.4/bin/squeue -u `whoami` -o \\\"%i %L\\\" | tail -n -1",
+                    "cmd": "{{ portal_slurm_bin }}/squeue -u `whoami` -o \\\"%i %L\\\" | tail -n -1",
                     "failFatal": true,
                     "formatFatal": false,
                     "host": "login",
@@ -119,7 +123,7 @@
                 },
                 "running": {
                     "async": false,
-                    "cmd": "\"/opt/slurm-25.11.4/bin/scontrol show job {jobidNumber}\"",
+                    "cmd": "\"{{ portal_slurm_bin }}/scontrol show job {jobidNumber}\"",
                     "failFatal": true,
                     "formatFatal": false,
                     "host": "login",
@@ -131,7 +135,7 @@
                 },
                 "startServer": {
                     "async": false,
-                    "cmd": "mkdir -p ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=$( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo $passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e '#!/bin/bash\n vncserver -geometry {resolution} -securitytypes none; sleep 36000000 ' | /opt/slurm-25.11.4/bin/sbatch -p batch -s -n 1 -c {ppn} --mem={mem}gb  --gres=gpu:{gpu} --time={hours}:00:00 -J desktop_'test' -o .vnc/slurm-%j.out",
+                    "cmd": "mkdir -p ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=$( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo $passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e '#!/bin/bash\n vncserver -geometry {resolution} -securitytypes none; sleep 36000000 ' | {{ portal_slurm_bin }}/sbatch -p batch -s -n 1 -c {ppn} --mem={mem}gb  --gres=gpu:{gpu} --time={hours}:00:00 -J desktop_'test' -o .vnc/slurm-%j.out",
                     "failFatal": true,
                     "formatFatal": false,
                     "host": "login",
@@ -141,21 +145,21 @@
                     ],
                     "requireMatch": true
                 },
-                "getUsage":{
-                     "async": true,
-		     "cmd": "/opt/slurm-25.11.4/bin/sacct -n -u `whoami` --start 2021-01-01 --format=jobid,alloccpus,cputime,reqmem,start,end,elapsed,alloctres%60 | tr -s ' ' | grep -vwE '(Unknown|batch)' | tail -5 | sort -r -k1 -n | awk '{gpu=0; if(match($8,/gres\\/gpu=([0-9]+)/,a)) gpu=a[1]; print $1,$2,$3,$4,$5,$6,$7,gpu}'",
-		     "failFatal": true,
-                     "formatFatal": false,
-                     "host": "login",
-                     "loop": false,
-                     "regex": [
-                         "^(?P<jobid>[0-9]*) (?P<alloccpus>.+) (?P<cputime>.+) (?P<reqmem>.+) (?P<start>.+) (?P<end>.+) (?P<elapsed>.+) ?(?P<allocgres>[0-9]+)$"
-                     ],
-                     "requireMatch": true
+                "getUsage": {
+                    "async": true,
+                    "cmd": "{{ portal_slurm_bin }}/sacct -n -u `whoami` --start 2021-01-01 --format=jobid,alloccpus,cputime,reqmem,start,end,elapsed,alloctres%60 | tr -s ' ' | grep -vwE '(Unknown|batch)' | tail -5 | sort -r -k1 -n | awk '{gpu=0; if(match($8,/gres\\/gpu=([0-9]+)/,a)) gpu=a[1]; print $1,$2,$3,$4,$5,$6,$7,gpu}'",
+                    "failFatal": true,
+                    "formatFatal": false,
+                    "host": "login",
+                    "loop": false,
+                    "regex": [
+                        "^(?P<jobid>[0-9]*) (?P<alloccpus>.+) (?P<cputime>.+) (?P<reqmem>.+) (?P<start>.+) (?P<end>.+) (?P<elapsed>.+) ?(?P<allocgres>[0-9]+)$"
+                    ],
+                    "requireMatch": true
                 },
                 "stop": {
                     "async": false,
-                    "cmd": "\"/opt/slurm-25.11.4/bin/scancel {jobidNumber}\"",
+                    "cmd": "\"{{ portal_slurm_bin }}/scancel {jobidNumber}\"",
                     "failFatal": true,
                     "formatFatal": false,
                     "host": "login",
@@ -201,7 +205,7 @@
                     ],
                     "requireMatch": true
                 },
-                "sshPrivateKey":{
+                "sshPrivateKey": {
                     "async": false,
                     "cmd": "[ ! -f ~/.ssh/authorized_keys ] && touch ~/.ssh/authorized_keys;[ ! -f ~/.ssh/eosc ] && ssh-keygen -q -t rsa -f ~/.ssh/eosc -N '' && cat ~/.ssh/eosc.pub >> ~/.ssh/authorized_keys; tr '\n' ':' < ~/.ssh/eosc",
                     "failFatal": true,

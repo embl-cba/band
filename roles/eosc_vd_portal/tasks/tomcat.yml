@@ -1,0 +1,201 @@
+---
+# Tomcat 9 (client.war is javax.servlet; Ubuntu 24.04 only packages Tomcat 10)
+# with the portal client and Guacamole. Tomcat runs as user tomcat, not root.
+- name: tomcat group
+  group:
+    name: tomcat
+    system: yes
+  become: yes
+
+- name: tomcat user
+  user:
+    name: tomcat
+    group: tomcat
+    system: yes
+    home: "{{ tomcat_dir }}"
+    create_home: no
+    shell: /usr/sbin/nologin
+  become: yes
+
+- name: download Tomcat {{ apache_tomcat_version }}
+  get_url:
+    url: "{{ apache_tomcat_url }}"
+    dest: "/opt/apache-tomcat-{{ apache_tomcat_version }}.tar.gz"
+    checksum: "sha512:{{ apache_tomcat_sha512 }}"
+    mode: '0644'
+  become: yes
+
+- name: unpack Tomcat
+  unarchive:
+    src: "/opt/apache-tomcat-{{ apache_tomcat_version }}.tar.gz"
+    dest: /opt
+    remote_src: yes
+    owner: root
+    group: root
+    creates: "/opt/apache-tomcat-{{ apache_tomcat_version }}/bin/catalina.sh"
+  become: yes
+
+# the sample and admin apps are not needed; ROOT would show Tomcat's version
+- name: remove Tomcat's bundled webapps
+  file:
+    path: "/opt/apache-tomcat-{{ apache_tomcat_version }}/webapps/{{ item }}"
+    state: absent
+  loop: [ROOT, docs, examples, manager, host-manager]
+  become: yes
+
+# the tarball ships bin/, lib/ and conf/ for root only (750/640/600); tomcat
+# needs to read and run them but not change them
+- name: Tomcat bin, lib and conf readable by tomcat
+  file:
+    path: "/opt/apache-tomcat-{{ apache_tomcat_version }}/{{ item }}"
+    owner: root
+    group: tomcat
+    mode: u=rwX,g=rX,o=
+    recurse: yes
+  loop: [bin, lib, conf]
+  become: yes
+
+- name: Tomcat dirs writable by tomcat
+  file:
+    path: "/opt/apache-tomcat-{{ apache_tomcat_version }}/{{ item }}"
+    state: directory
+    owner: tomcat
+    group: tomcat
+    mode: '0750'
+  loop: [logs, temp, work, webapps]
+  become: yes
+
+# context files are only read; owned like the rest of conf/
+- name: Tomcat context dir
+  file:
+    path: "/opt/apache-tomcat-{{ apache_tomcat_version }}/conf/Catalina/localhost"
+    state: directory
+    owner: root
+    group: tomcat
+    mode: '0750'
+  become: yes
+
+- name: symlink {{ tomcat_dir }} to this Tomcat
+  file:
+    src: "/opt/apache-tomcat-{{ apache_tomcat_version }}"
+    dest: "{{ tomcat_dir }}"
+    state: link
+    force: yes
+  become: yes
+  notify: restart tomcat
+
+# client.war's web.xml points log4j at /opt/coesra/coesra.log4j2.xml, which
+# never existed; the context parameter below overrides it
+- name: "{{ eosc_dir }} exists"
+  file:
+    path: "{{ eosc_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: log4j config for the client
+  copy:
+    src: eosc.log4j2.xml
+    dest: "{{ eosc_dir }}/eosc.log4j2.xml"
+    owner: root
+    mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+- name: client context (log4j config location)
+  template:
+    src: client-context.xml.j2
+    dest: "{{ tomcat_dir }}/conf/Catalina/localhost/client.xml"
+    owner: root
+    group: tomcat
+    mode: '0640'
+  become: yes
+  notify: restart tomcat
+
+# OIDC settings of the client, with its client secret
+- name: eosc.properties
+  template:
+    src: eosc.properties.j2
+    dest: "{{ tomcat_dir }}/lib/eosc.properties"
+    owner: root
+    group: tomcat
+    mode: '0640'
+  become: yes
+  notify: restart tomcat
+
+- name: portal client war
+  copy:
+    src: "{{ portal_client_file }}"
+    dest: "{{ tomcat_dir }}/webapps/client.war"
+    owner: root
+    group: tomcat
+    mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+- name: guacamole war
+  copy:
+    src: "guacamole-{{ guacamole_version }}.war"
+    dest: "{{ tomcat_dir }}/webapps/guacamole.war"
+    owner: root
+    group: tomcat
+    mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+######## GUACAMOLE_HOME (/etc/guacamole is guacamole's default)
+- name: guacamole home dirs
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ guacamole_home }}"
+    - "{{ guacamole_home }}/extensions"
+    - "{{ guacamole_home }}/lib"
+  become: yes
+
+- name: gson 2.4 for the extension
+  get_url:
+    url: "{{ gson_24_url }}"
+    dest: "{{ guacamole_home }}/lib/gson-2.4.jar"
+    checksum: "sha256:{{ gson_24_sha256 }}"
+    mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+- name: BAND guacamole extension
+  copy:
+    src: "massive-guacamole-remote-{{ massive_plugin_version }}.jar"
+    dest: "{{ guacamole_home }}/extensions/massive-guacamole-remote-{{ massive_plugin_version }}.jar"
+    owner: root
+    mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+- name: guacamole.properties
+  template:
+    src: guacamole.properties.j2
+    dest: "{{ guacamole_home }}/guacamole.properties"
+    owner: root
+    mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+######## service
+- name: tomcat systemd unit
+  template:
+    src: tomcat.service.j2
+    dest: /etc/systemd/system/tomcat.service
+    owner: root
+    mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+- name: tomcat enabled and started
+  systemd:
+    name: tomcat
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  become: yes
