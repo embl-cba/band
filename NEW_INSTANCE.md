@@ -22,7 +22,7 @@ other secrets are in the vaulted `vars/passwords.yml` (see Secrets).
 | mgmt-0 | private | Rocky 9 | slurmctld, slurmdbd, MariaDB |
 | login-0 | private | Rocky 9 | login, VNC |
 | node-1 … node-8 | private | Rocky 9 | desktop nodes, 1× Tesla V100-SXM2-32GB each |
-| band-portal | private | Ubuntu 20.04 | portal |
+| band-portal | private | Ubuntu 24.04 | portal: nginx (web app), Tomcat (client, Guacamole), eosc-rs, guacd, MongoDB; behind the reverse proxy |
 
 Addresses are in `inventory_tubi` / `files/etcHosts`.
 
@@ -36,7 +36,7 @@ LDAP `ldaps://<site_ldap_host>` (no DNS record; its address is in
 ## Ansible
 
 Use the Ansible 9 venv (ansible-core 2.16), not the system `ansible-playbook`
-(2.21 can't manage band-portal's Python 3.8):
+(the playbooks are tested with 2.16):
 
     cd /home/ubuntu/create-band-tubi
     ~/ansible216/bin/ansible-playbook <playbook>.yml
@@ -68,7 +68,54 @@ Edit or read them with:
     ~/ansible216/bin/ansible-vault view files/slurmdbd.conf
     echo -n 'new-secret' | ~/ansible216/bin/ansible-vault encrypt_string --stdin-name some_var
 
+A single `!vault` value is read through Ansible:
+
+    ~/ansible216/bin/ansible localhost -m debug -a var=ca_pass_prase -e @vars/eosc-portal.yml
+
 Never commit a decrypted copy.
+
+**Working from another machine:** clone the repo, then copy the vault password
+file over a safe channel (scp, password manager; never git) to
+`~/.ansible/vault_pass_tubi` with mode 600.
+
+**New instance, new vault password:** whole files are re-encrypted with
+`rekey`; `!vault` values are not (rekey only works on files), so encrypt each
+again with `encrypt_string` and replace the old block. A new site should get
+new values anyway (munge key, DB passwords, root hash, portal CA).
+
+    openssl rand -base64 32 > ~/.ansible/vault_pass_newsite; chmod 600 ~/.ansible/vault_pass_newsite
+    ~/ansible216/bin/ansible-vault rekey --vault-password-file ~/.ansible/vault_pass_tubi \
+        --new-vault-password-file ~/.ansible/vault_pass_newsite \
+        vars/passwords.yml files/slurmdbd.conf files/server_ca
+
+and point `vault_password_file` in `ansible.cfg` at the new file.
+
+## Portal SSH CA
+
+eosc-rs signs a short-lived ssh certificate for each portal login (principal =
+user name) and logs in to login-0 with it; the nodes trust the CA through
+`/etc/ssh/sshd_config.d/40-band-portal-ca.conf` (role `portal_ca_trust`). The
+CA is the only key made by hand. The HTTPS certificate belongs to the reverse
+proxy (certbot there, not Ansible); ssh host keys and the per-user
+certificates are made automatically.
+
+For a new instance, before the first `eoscportal.yml` run:
+
+    openssl rand -base64 24        # the CA passphrase; keep it in a password manager
+    ssh-keygen -t rsa -b 4096 -m PEM -f files/server_ca -C band-portal-ca-<site>-<date>
+    ~/ansible216/bin/ansible-vault encrypt files/server_ca
+    echo -n '<passphrase>' | ~/ansible216/bin/ansible-vault encrypt_string --stdin-name ca_pass_prase
+    # paste the output into vars/eosc-portal.yml in place of the old ca_pass_prase
+
+- `-m PEM`: the resource server reads only PEM private keys.
+- `-C` without spaces: the resource server can't parse a `.pub` whose comment
+  has spaces.
+- `files/server_ca.pub` stays plain text in git.
+- `eoscportal.yml` then installs the CA on the portal and the trust on
+  LoginNodes and DesktopNodes in the same run.
+- The certificates are signed with RSA/SHA-512 (`resource-server-0.0.4-sha512.jar`,
+  built with `roles/eosc_vd_portal/files/patches/resource-server-sha512.patch`);
+  Rocky 9 refuses the SHA-1 signatures of the unpatched jar.
 
 ## Hand-maintained files
 
@@ -120,8 +167,12 @@ only `ManagementNodes:LoginNodes:DesktopNodes`, never band-portal.
    no job left on the node.
 
 Not part of the full run:
-- Portal: `eoscservers.yml` (now also `eosc_prepare_loginnode` on login-0),
-  `eoscportal.yml`. Not reviewed for tubi yet.
+- Portal: `eoscportal.yml` (band-portal, and the CA trust on login-0 and the
+  desktop nodes). Its binaries are fetched from the GitHub release
+  `portal-artifacts-tubi-20261030` (pinned sha256). The reverse proxy config is
+  `files/reverse-proxy.conf.example`.
+- Desktop apps: `eoscservers.yml` (now also `eosc_prepare_loginnode` on
+  login-0). Not reviewed for tubi yet.
 - `ldapserver.yml` (the LDAP server itself). Its `ldapserver` group is not in
   `inventory_tubi`; add one before using it.
 - The pre-split all-in-one playbook is kept as `attic/cluster_installation.old.yml`.
