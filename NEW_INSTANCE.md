@@ -99,7 +99,7 @@ CA is the only key made by hand. The HTTPS certificate belongs to the reverse
 proxy (certbot there, not Ansible); ssh host keys and the per-user
 certificates are made automatically.
 
-For a new instance, before the first `eoscportal.yml` run:
+For a new instance, before the first `portal.yml` run:
 
     openssl rand -base64 24        # the CA passphrase; keep it in a password manager
     ssh-keygen -t rsa -b 4096 -m PEM -f files/server_ca -C band-portal-ca-<site>-<date>
@@ -111,7 +111,7 @@ For a new instance, before the first `eoscportal.yml` run:
 - `-C` without spaces: the resource server can't parse a `.pub` whose comment
   has spaces.
 - `files/server_ca.pub` stays plain text in git.
-- `eoscportal.yml` then installs the CA on the portal and the trust on
+- `portal.yml` then installs the CA on the portal and the trust on
   LoginNodes and DesktopNodes in the same run.
 - The certificates are signed with RSA/SHA-512 (`resource-server-0.0.4-sha512.jar`,
   built with `roles/eosc_vd_portal/files/patches/resource-server-sha512.patch`);
@@ -132,7 +132,7 @@ from templates and overwrite the hand-made versions. Don't run it.
 
 ## Deploy order
 
-`cluster_installation.yml` runs steps 0-10 in order (`import_playbook`). Each
+`cluster_installation.yml` runs steps 0-7 in order (`import_playbook`). Each
 step is also its own playbook, so a step can be rerun alone. All of them target
 only `ManagementNodes:LoginNodes:DesktopNodes`, never band-portal.
 
@@ -154,35 +154,37 @@ only `ManagementNodes:LoginNodes:DesktopNodes`, never band-portal.
    `--dry-run` shows what it would do. Newly provisioned users get a welcome
    mail (`provision_send_email: True` in the playbook; SMTP settings in
    `vars/passwords.yml`).
-7. `7_installvgl.yml`: VirtualGL, EGL back end, for GPU-rendered OpenGL in VNC
-   desktops (`vglrun <app>`).
-8. `8_lmod.yml`: Lmod on login and desktop nodes.
-9. `9_vncserver.yml`: TigerVNC with the GNOME flashback/metacity session on
-   the desktop nodes. Keeps plymouth out of the initramfs (`/boot` is small)
-   and turns off firewalld, which the GUI group installs enabled.
-10. `10_s3fs.yml`: s3fs-fuse on the desktop nodes. `slurm.epilog` unmounts a
-   user's `fuse.s3fs` mounts (matched by the mount's `user_id`, nothing else),
-   removes the empty mount point, deletes `~/.passwd-s3fs` once the user has no
-   job left anywhere, and cleans their X/pulse files in `/tmp` once they have
-   no job left on the node.
+7. `7_desktop.yml`: what users get in their desktop, on the desktop nodes
+   (Lmod also on login-0). No reboots; one part alone with `--tags`:
+   - `vgl`: VirtualGL, EGL back end, for GPU-rendered OpenGL in VNC desktops
+     (`vglrun <app>`).
+   - `lmod`: Lmod on login and desktop nodes.
+   - `vnc`: TigerVNC with the GNOME flashback/metacity session. Keeps plymouth
+     out of the initramfs (`/boot` is small) and turns off firewalld, which
+     the GUI group installs enabled.
+   - `s3`: s3fs-fuse and the "Mount S3 Buckets" GUI. `slurm.epilog` unmounts a
+     user's `fuse.s3fs` mounts (matched by the mount's `user_id`, nothing
+     else), removes the empty mount point, deletes `~/.passwd-s3fs` once the
+     user has no job left anywhere, and cleans their X/pulse files in `/tmp`
+     once they have no job left on the node.
+   - `apps`: apptainer (provides the `singularity` the launchers call), Java 21
+     (nextflow), firefox, tools; dconf settings (no screensaver, logout, lock
+     screen or sleep; background); the "Data Access" and "Image Analysis" menus
+     and the launchers (`roles/customize_desktop`:
+     `templates/<app>.desktop.j2`, the icon in `files/`, both listed in
+     `vars/main.yml`). The apps are containers on the share `/vd-containers`; a
+     new app needs its container there and a launcher in the role. Tools that
+     aren't containers live in `/nfs/local/bin` and are linked into
+     `/usr/local/bin`: rclone (role `rclone`, plus `rclone-gui`) and nextflow
+     (role `nextflow`), both pinned with sha256 and reinstalled if missing.
+     Container recipes: `files/container-recipes/` (TissUUmaps) and
+     `/vd-containers/container-recipes/`.
 
 Not part of the full run:
-- Portal: `eoscportal.yml` (band-portal, and the CA trust on login-0 and the
+- Portal: `portal.yml` (band-portal, and the CA trust on login-0 and the
   desktop nodes). Its binaries are fetched from the GitHub release
   `portal-artifacts-tubi-20261030` (pinned sha256). The reverse proxy config is
   `files/reverse-proxy.conf.example`.
-- Desktop apps: `eoscservers.yml` on the desktop nodes. apptainer (provides
-  the `singularity` the launchers call), Java 21 (nextflow), firefox, tools;
-  dconf settings (no screensaver, logout, lock screen or sleep; background);
-  the "Data Access" and "Image Analysis" menus and the launchers
-  (`roles/customize_desktop`: `templates/<app>.desktop.j2`, the icon in
-  `files/`, both listed in `vars/main.yml`). The apps are containers on the
-  share `/vd-containers`; a new app needs its container there and a launcher
-  in the role. Tools that aren't containers live in `/nfs/local/bin` and are
-  linked into `/usr/local/bin`: rclone (role `rclone`, plus `rclone-gui`) and
-  nextflow (role `nextflow`), both pinned with sha256 and reinstalled if
-  missing. Container recipes: `files/container-recipes/` (TissUUmaps) and
-  `/vd-containers/container-recipes/`.
 - `ldapserver.yml` (the LDAP server itself). Its `ldapserver` group is not in
   `inventory_tubi`; add one before using it.
 - The pre-split all-in-one playbook is kept as `attic/cluster_installation.old.yml`.
@@ -196,7 +198,7 @@ Not part of the full run:
 - **No firewall on the nodes.** The OpenStack security groups do that job.
   firewalld (pulled in by "Server with GUI") blocks slurmd's port 6818 and
   srun's ports: the node shows `idle*`/`down*` and jobs never start.
-  `9_vncserver.yml` disables it.
+  `7_desktop.yml` (tag `vnc`) disables it.
 - **cloud-init resets the host name** to the OpenStack FQDN (`node-1.<domain>`) on every boot
   unless `/etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg` says
   `preserve_hostname: true`; `0_base.yml` installs that.

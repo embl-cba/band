@@ -42,7 +42,7 @@ if($slashndx>=0) {
 # your site
 #
 
-$geometry = "1024x768";
+$geometry = "1440x900";
 #$depth = 16;
 
 $vncUserDir = "$ENV{HOME}/.vnc";

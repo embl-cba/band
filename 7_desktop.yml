@@ -1,0 +1,49 @@
+# Step 7: what users get in their desktop. No reboots, every part idempotent;
+# run one part alone with --tags vgl|lmod|vnc|s3|apps.
+
+# VirtualGL, EGL back end, for GPU-rendered OpenGL in VNC desktops (vglrun);
+# needs the NVIDIA driver from step 2
+- hosts: 'DesktopNodes'
+  gather_facts: true
+  become: yes
+  tags: vgl
+  roles:
+  - { role: vgl }
+
+# Lmod (environment modules), also on login-0
+- hosts: 'LoginNodes:DesktopNodes'
+  gather_facts: true
+  tags: lmod
+  roles:
+  - { role: enable_lmod }
+
+# TigerVNC with the GNOME flashback/metacity session (login-0 doesn't serve
+# desktops)
+- hosts: 'DesktopNodes'
+  gather_facts: true
+  tags: vnc
+  roles:
+  - { role: vncserver }
+
+# s3fs-fuse and the "Mount S3 Buckets" GUI (embl-s3, /opt/s3/mount-s3.py);
+# slurm.epilog unmounts a user's buckets when their last job on the node ends
+- hosts: 'DesktopNodes'
+  gather_facts: true
+  tags: s3
+  roles:
+  - { role: s3fs }
+  - { role: embl-s3 }
+
+# apps: apptainer (runs the containers in /vd-containers), java and standard
+# tools, rclone and nextflow (binaries on the share in /nfs/local/bin,
+# installed if missing, linked into /usr/local/bin), the GNOME desktop
+# settings (dconf: screensaver, logout, background), the application menu
+# and the launchers
+- hosts: 'DesktopNodes'
+  become: yes
+  tags: apps
+  roles:
+    - { role: common }
+    - { role: rclone }
+    - { role: nextflow }
+    - { role: customize_desktop }

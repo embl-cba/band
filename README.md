@@ -21,8 +21,8 @@ The Ansible code here is the deployment of the de.NBI Tübingen node
 (branch `tubi`; `main` currently follows it): Rocky Linux 9, Slurm 25.11,
 GPU desktop nodes with NVIDIA drivers and VirtualGL, LDAP accounts, NFS homes,
 TigerVNC desktops and S3 bucket mounting. The cluster is installed by numbered
-playbooks `0_base.yml` … `10_s3fs.yml`, which `cluster_installation.yml` runs
-in order. [NEW_INSTANCE.md](NEW_INSTANCE.md) describes each step, the
+playbooks `0_base.yml` … `7_desktop.yml`, which `cluster_installation.yml` runs
+in order; the portal VM has its own, `portal.yml`. [NEW_INSTANCE.md](NEW_INSTANCE.md) describes each step, the
 requirements and the known pitfalls.
 
 Not in the repository, by design. Placeholders are pushed instead:

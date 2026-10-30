@@ -21,13 +21,27 @@
   become: yes
   when: ansible_facts['os_family'] == 'RedHat'
 
+# dnf's group install also upgrades the group's installed packages (a new
+# linux-firmware, ...), so only install groups that aren't installed yet;
+# updates stay a deliberate step
+- name: installed package groups
+  command: dnf -q group list --installed "{{ item }}"
+  become: yes
+  register: group_installed
+  changed_when: false
+  check_mode: false
+  with_items: "{{ system_group_packages }}"
+  when: system_group_packages is defined
+
 - name: yum group installs
   become: yes
-  dnf: 
-    name: "@{{ item }}"
+  dnf:
+    name: "@{{ item.item }}"
     state: present
-  with_items: "{{system_group_packages}}"
-  when: system_group_packages is defined
+  loop: "{{ group_installed.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: system_group_packages is defined and 'Installed' not in item.stdout
 
 # the GUI group pulls in firewalld enabled; it blocks slurmd (6818) and srun
 # ports after the next reboot. The cluster relies on the OpenStack security groups.
@@ -57,13 +71,9 @@
   changed_when: false
   when: ansible_facts['os_family'] == 'RedHat'
 
-- name: force the use of mate desktop
+# GNOME flashback/metacity default xstartup, default geometry 1440x900
+- name: vncserver script
   template: src=vncserver.rocky dest=/bin/vncserver
-  become: yes
-  when: ansible_distribution == "Rocky"
-
-- name: modify geometry
-  replace: dest=/bin/vncserver regexp='1024x768' replace='1440x900' backup=yes
   become: yes
   when: ansible_distribution == "Rocky"
 

@@ -1,6 +1,0 @@
----
-- hosts: 'DesktopNodes'
-  gather_facts: true
-  become: yes
-  roles:
-  - { role: vgl }

@@ -1,9 +1,0 @@
-# Step 10: s3fs-fuse on the desktop nodes, and the "Mount S3 Buckets" GUI
-# (embl-s3, /opt/s3/mount-s3.py) so users can mount S3 buckets.
-# slurm.epilog unmounts a user's s3fs buckets when their last job on the node ends.
-
-- hosts: 'DesktopNodes'
-  gather_facts: true
-  roles:
-  - { role: s3fs }
-  - { role: embl-s3 }

@@ -1,6 +1,6 @@
-# Full install of a new cluster: runs steps 0-10 in order.
+# Full install of a new cluster: runs steps 0-7 in order.
 # Each step is its own playbook and can also be run alone.
-# The portal (eoscservers.yml, eoscportal.yml) is separate.
+# The portal (portal.yml) is separate.
 
 - import_playbook: 0_base.yml
 - import_playbook: 1_disable_selinux.yml
@@ -9,7 +9,4 @@
 - import_playbook: 4_nfs_installation.yml
 - import_playbook: 5_slurm_installation.yml
 - import_playbook: 6_provision_account.yml
-- import_playbook: 7_installvgl.yml
-- import_playbook: 8_lmod.yml
-- import_playbook: 9_vncserver.yml
-- import_playbook: 10_s3fs.yml
+- import_playbook: 7_desktop.yml

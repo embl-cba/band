@@ -1,7 +1,0 @@
-# Step 9: TigerVNC with the GNOME flashback/metacity session on the desktop
-# nodes (login-0 doesn't serve desktops).
-
-- hosts: 'DesktopNodes'
-  gather_facts: true
-  roles:
-  - { role: vncserver }

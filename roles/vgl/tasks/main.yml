@@ -48,6 +48,8 @@
   shell: ls -d /sys/bus/pci/drivers/nvidia/0000:* | head -1 | xargs basename
   register: nvidia_pci
   changed_when: false
+  # read-only, so it also runs in --check (the next task needs its output)
+  check_mode: false
 
 - name: Check the NVIDIA DRI device exists
   stat:
