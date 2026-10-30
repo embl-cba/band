@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=nnInteractive
+Icon=/usr/share/pixmaps/nn.png
+Exec=/bin/singularity exec --nv -B /scratch:/scratch /vd-containers/nninteractive vglrun -d egl /opt/conda/envs/nnInteractive/bin/napari -w napari-nninteractive
+Terminal=false
+Categories=X-ImageAnalysis;

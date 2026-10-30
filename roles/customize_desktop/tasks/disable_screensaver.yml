@@ -17,6 +17,7 @@
     owner: root
     group: root
     mode: '0644'
+  notify: update dconf
 
 - name: Deploy locks file for screensaver
   become: yes
@@ -26,7 +27,4 @@
     owner: root
     group: root
     mode: '0644'
-
-- name: Update dconf database
-  command: dconf update
-  become: yes
+  notify: update dconf

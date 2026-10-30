@@ -13,7 +13,6 @@
   become: yes
   when: ansible_distribution == "Rocky"
 
-# ansible_os_family is overridden to "Rocky" by vars/eosc-servers.yml, so use the real fact
 - name: install lua
   yum: name={{ item }} state=installed
   with_items:

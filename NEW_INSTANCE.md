@@ -171,8 +171,14 @@ Not part of the full run:
   desktop nodes). Its binaries are fetched from the GitHub release
   `portal-artifacts-tubi-20261030` (pinned sha256). The reverse proxy config is
   `files/reverse-proxy.conf.example`.
-- Desktop apps: `eoscservers.yml` (now also `eosc_prepare_loginnode` on
-  login-0). Not reviewed for tubi yet.
+- Desktop apps: `eoscservers.yml` on the desktop nodes. apptainer (provides
+  the `singularity` the launchers call), Java 21 (nextflow), firefox, tools;
+  dconf settings (no screensaver, logout, lock screen or sleep; background);
+  the "Data Access" and "Image Analysis" menus and the launchers
+  (`roles/customize_desktop`: `templates/<app>.desktop.j2`, the icon in
+  `files/`, both listed in `vars/main.yml`). The apps are containers on the
+  share `/vd-containers`; a new app needs its container there and a launcher
+  in the role.
 - `ldapserver.yml` (the LDAP server itself). Its `ldapserver` group is not in
   `inventory_tubi`; add one before using it.
 - The pre-split all-in-one playbook is kept as `attic/cluster_installation.old.yml`.
@@ -218,8 +224,6 @@ Not part of the full run:
 - Slurm 25.11: slurmctld must run as `SlurmUser` (`User=slurm` in its unit),
   slurmd needs `Delegate=yes` for cgroup v2, munge 0.5.18 needs
   `<munge_dir>/var/run/munge` to exist.
-- `vars/eosc-servers.yml` overrides `ansible_os_family` to `Rocky`. Conditions
-  that need the real value must use `ansible_facts['os_family']`.
 
 The previous version of this file (from the copied instance) is in
 `attic/NEW_INSTANCE.old.md`.

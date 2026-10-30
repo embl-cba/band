@@ -32,6 +32,6 @@
       Exec=/bin/python3 {{ deploy_script_dest }}/{{ deploy_script_name }}
       Type=Application
       Terminal=false
-      Categories=DataAccess;
+      Categories=X-DataAccess;
     mode: '0644'
   when: create_desktop_entry | default(false)

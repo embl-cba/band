@@ -1,9 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Tissuumaps
+Name=TissUUmaps
 Icon=/usr/share/pixmaps/tissuumaps.png
-Exec=/bin/singularity exec --nv -B /scratch:/scratch /vd-containers/tissuumaps vglrun /opt/conda/envs/tissuumaps_env/bin/tissuumaps
-Categories=ImageAnalysis;
-MimeType=application/x-qgis-project;image/tiff;image/jpeg;image/jp2;application/x-raster-aig;application/x-mapinfo-mif;application/x-esri-shape;
-Keywords=map;globe;postgis;wms;wfs;ogc;osgeo;
-X-Desktop-File-Install-Version=0.22
+Exec=/bin/singularity exec --nv -B /scratch:/scratch /vd-containers/tissuumaps vglrun -d egl /opt/conda/envs/tissuumaps_env/bin/tissuumaps
+Terminal=false
+Categories=X-ImageAnalysis;

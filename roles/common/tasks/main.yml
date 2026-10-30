@@ -1,18 +1,22 @@
-## YAML Template.
 ---
-- name: Remove openstack-icehouse if exist
-  file: path=/etc/yum.repos.d/rdo-release.repo state=absent
+# No "dnf update" here: a full update on the GPU nodes pulls a new kernel and
+# rebuilds the NVIDIA module; update nodes deliberately, one at a time.
 
-- name: Updates yum cache
-  dnf: name=* state=latest
+# apptainer comes from EPEL
+- name: EPEL
+  dnf: name=epel-release state=present
 
+# apptainer provides /usr/bin/singularity, which the launchers in
+# /vd-containers call; java for nextflow
 - name: Install some standard packages
-  dnf: pkg={{item}} state=installed
-  with_items:
-    - git
-    - vim
-    - ant
-    - unzip
-    - openssl
-    - openssl-devel
-
+  dnf:
+    name:
+      - apptainer
+      - java-21-openjdk-headless
+      - firefox
+      - git
+      - vim-enhanced
+      - unzip
+      - openssl
+      - openssl-devel
+    state: present

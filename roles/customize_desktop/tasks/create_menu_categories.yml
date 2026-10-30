@@ -29,8 +29,3 @@
     src: gnome-config.menu
     dest: /etc/xdg/menus/applications-merged/gnome-config.menu
     mode: '0644'
-
-- name: Update dconf database
-  command: dconf update
-  become: yes
-

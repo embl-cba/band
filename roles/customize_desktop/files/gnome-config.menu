@@ -7,7 +7,7 @@
         <Name>DataAccess</Name>
         <Directory>data-access.directory</Directory>
         <Include>
-            <Category>DataAccess</Category>
+            <Category>X-DataAccess</Category>
         </Include>
     </Menu>
 
@@ -15,7 +15,7 @@
         <Name>ImageAnalysis</Name>
         <Directory>image-analysis.directory</Directory>
         <Include>
-            <Category>ImageAnalysis</Category>
+            <Category>X-ImageAnalysis</Category>
         </Include>
     </Menu>
 </Menu>

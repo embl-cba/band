@@ -1,10 +1,23 @@
-- name: Copy all icons 
+- name: Copy all icons
   become: yes
   copy:
     src: "{{ item.icon }}"
     dest: "/usr/share/pixmaps/{{ item.icon }}"
     mode: '0644'
   loop: "{{ gnome_apps }}"
+
+# helper scripts the napari and rclone launchers call
+- name: Launcher scripts
+  become: yes
+  copy:
+    src: "{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - run_napari_vgl.sh
+    - rclone-gui
 
 - name: Deploy .desktop files from templates
   become: yes

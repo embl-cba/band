@@ -1,0 +1,28 @@
+#!/bin/bash
+# Rclone web GUI: start "rclone gui" (the central binary on /vd-containers)
+# and open its URL in the browser. rclone keeps running until the desktop
+# session ends.
+RCLONE=/vd-containers/rclone-prog/bin/rclone
+TMPFILE=$(mktemp)
+trap 'rm -f "$TMPFILE"' EXIT
+
+"$RCLONE" gui > "$TMPFILE" 2>&1 &
+RCLONE_PID=$!
+
+# wait up to 10 s for the URL to appear in the output
+URL=
+for i in $(seq 1 10); do
+    sleep 1
+    URL=$(grep "GUI available at" "$TMPFILE" | awk '{print $NF}')
+    [ -n "$URL" ] && break
+done
+
+if [ -z "$URL" ]; then
+    echo "rclone gui did not start:" >&2
+    cat "$TMPFILE" >&2
+    kill $RCLONE_PID 2>/dev/null
+    exit 1
+fi
+
+xdg-open "$URL"
+wait $RCLONE_PID

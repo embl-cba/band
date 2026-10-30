@@ -1,33 +1,9 @@
-# portal-side packages on the login node (python ldap/mysql bindings)
-- hosts: 'LoginNodes'
-  roles:
-  - {role: eosc_prepare_loginnode}
-
-- hosts: '*'
-  tasks:
-  - include_vars: vars/eosc-servers.yml
-
-#### system tools
+# Desktop apps on the desktop nodes: apptainer (runs the containers in
+# /vd-containers), java and standard tools, the GNOME desktop settings (dconf:
+# screensaver, logout, background) and the application menu and launchers.
 
 - hosts: 'DesktopNodes'
-  tasks:
-  - name: system tools
-    yum: name={{ item }} state=installed
-    with_items:
-    - java-latest-openjdk-headless.x86_64
-    - singularity.x86_64
-    - firefox.x86_64
-    become: yes
-    when: ansible_os_family == "RedHat"
-  
-  
-
-- hosts: 'DesktopNodes'
-  user: rocky
   become: yes
-  gather_facts: true
   roles:
     - { role: common }
-    # GNOME/metacity desktop (dconf): screensaver, logout, menus, launchers, background
     - { role: customize_desktop }
-

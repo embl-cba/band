@@ -13,6 +13,7 @@
     content: |
       [org/gnome/desktop/background]
       picture-uri='file:///usr/share/backgrounds/{{wallpaper_image}}'
+  notify: update dconf
 
 - name: Lock desktop background setting
   become: yes
@@ -20,8 +21,4 @@
     dest: /etc/dconf/db/local.d/locks/background
     content: |
       /org/gnome/desktop/background/picture-uri
-
-- name: Update dconf database
-  command: dconf update
-  become: yes
-
+  notify: update dconf

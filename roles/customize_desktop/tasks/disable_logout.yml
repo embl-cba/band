@@ -13,6 +13,7 @@
       power-button-action='nothing'
       sleep-inactive-ac-type='nothing'
       sleep-inactive-battery-type='nothing'
+  notify: update dconf
 
 - name: lock the setting to prevent user override
   become: yes
@@ -25,6 +26,7 @@
       /org/gnome/settings-daemon/plugins/power/power-button-action
       /org/gnome/settings-daemon/plugins/power/sleep-inactive-ac-type
       /org/gnome/settings-daemon/plugins/power/sleep-inactive-battery-type
+  notify: update dconf
 
 - name: Disable suspend, hibernate, and sleep system-wide
   become: true
@@ -38,7 +40,3 @@
     - suspend.target
     - hibernate.target
     - hybrid-sleep.target
-
-- name: Update dconf database
-  become: yes
-  command: dconf update
