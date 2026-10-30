@@ -1,8 +1,8 @@
 #!/bin/bash
-# Rclone web GUI: start "rclone gui" (the central binary on /vd-containers)
+# Rclone web GUI: start "rclone gui" (the central binary, see role rclone)
 # and open its URL in the browser. rclone keeps running until the desktop
 # session ends.
-RCLONE=/vd-containers/rclone-prog/bin/rclone
+RCLONE=/usr/local/bin/rclone
 TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' EXIT
 

@@ -1,0 +1,82 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+# TissUUmaps 3.2.1.14 (GUI, PySide6 6.4.3 / QtWebEngine) with VirtualGL.
+# Rebuilt 2026-10 for BAND tubi. The 2024-12 build broke because numpy 2 was
+# installed (shiboken6 6.4.3 is built against numpy 1.x) and the system Qt 6.2
+# from qt6-base-dev was loaded instead of PySide6's own Qt 6.4.
+# Rules here: no system Qt, pinned versions, one glib (the conda one, see
+# /opt/tissuumaps-gui).
+#
+# Build:  apptainer build tissuumaps.sif Singularity.tissuumaps-3.2.1.14
+# Run:    singularity exec --nv -B /scratch:/scratch tissuumaps.sif vglrun -d egl /opt/tissuumaps-gui
+
+%labels
+    Version 3.2.1.14
+    Maintainer BAND tubi
+
+%environment
+    export PATH=/opt/conda/envs/tissuumaps_env/bin:/opt/conda/bin:$PATH
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -y
+    # runtime libraries for PySide6/QtWebEngine (xcb platform, Chromium) and
+    # VirtualGL; Qt itself comes with the PySide6 wheels
+    apt-get install -y --no-install-recommends \
+        ca-certificates wget \
+        libgl1 libegl1 libopengl0 libglu1-mesa libgbm1 libdrm2 \
+        libglib2.0-0 libfontconfig1 libfreetype6 fonts-dejavu-core libdbus-1-3 \
+        libx11-6 libx11-xcb1 libxext6 libxrender1 libxi6 libxtst6 libxv1 \
+        libxcursor1 libxrandr2 libxcomposite1 libxdamage1 libxfixes3 libxss1 \
+        libxshmfence1 libxkbfile1 libxkbcommon0 libxkbcommon-x11-0 \
+        libxcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+        libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
+        libxcb-xkb1 libxcb-xfixes0 libxcb-glx0 \
+        libnss3 libnspr4 libasound2 libcups2 libpci3 libegl-mesa0
+
+    # VirtualGL (vglrun) 3.1.5
+    cd /tmp
+    wget -q https://github.com/VirtualGL/virtualgl/releases/download/3.1.5/virtualgl_3.1.5_amd64.deb
+    apt-get install -y --no-install-recommends ./virtualgl_3.1.5_amd64.deb
+    rm -f virtualgl_3.1.5_amd64.deb
+
+    # conda-forge only (Miniforge), pinned release
+    wget -q https://github.com/conda-forge/miniforge/releases/download/26.9.4-1/Miniforge3-Linux-x86_64.sh
+    bash Miniforge3-Linux-x86_64.sh -b -p /opt/conda
+    rm -f Miniforge3-Linux-x86_64.sh
+    /opt/conda/bin/conda create -y -n tissuumaps_env -c conda-forge --override-channels \
+        python=3.11 "numpy<2" libvips pyvips openslide openslide-python
+    # PySide6 6.4.3 is what TissUUmaps[full] pins; keep numpy < 2 for shiboken6
+    /opt/conda/envs/tissuumaps_env/bin/pip install --no-cache-dir \
+        "TissUUmaps[full]==3.2.1.14" "numpy<2"
+    /opt/conda/bin/conda clean -afy
+
+    # GUI wrapper: the conda env's libraries (glib, vips) first, so PySide6's Qt
+    # and pyvips share one glib; vglrun's LD_PRELOAD stays in place.
+    cat > /opt/tissuumaps-gui <<'EOF'
+#!/bin/sh
+E=/opt/conda/envs/tissuumaps_env
+export LD_LIBRARY_PATH="$E/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Qt's file dialog on GNOME is GTK's, and that GTK is the conda env's: its
+# GSettings schemas and icon themes are in $E/share (without them it aborts)
+export XDG_DATA_DIRS="$E/share:/usr/share"
+# the container only has the C.UTF-8 locale, not the host's
+export LANG=C.UTF-8 LC_ALL=C.UTF-8
+# QtWebEngine's Chromium sandbox needs privileges a container doesn't have
+export QTWEBENGINE_DISABLE_SANDBOX=1
+exec "$E/bin/tissuumaps" "$@"
+EOF
+    chmod 755 /opt/tissuumaps-gui
+
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+
+%runscript
+    exec /opt/tissuumaps-gui "$@"
+
+%test
+    /opt/conda/envs/tissuumaps_env/bin/python -c "import numpy; assert numpy.__version__.startswith('1.'), numpy.__version__"
+    # not tissuumaps.gui: importing it starts the program (and exits 0 without a display)
+    LD_LIBRARY_PATH=/opt/conda/envs/tissuumaps_env/lib /opt/conda/envs/tissuumaps_env/bin/python -c "import PySide6.QtGui, PySide6.QtWebEngineWidgets, pyvips, openslide, tissuumaps; print('imports ok')"
+    test -d /opt/conda/envs/tissuumaps_env/share/glib-2.0/schemas

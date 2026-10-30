@@ -1,0 +1,74 @@
+---
+# the binary lives on the share: check and install it from one node only
+- name: installed rclone version
+  command: "{{ rclone_dir }}/bin/rclone version"
+  register: rclone_installed
+  failed_when: false
+  changed_when: false
+  check_mode: false
+  run_once: true
+
+- name: install rclone {{ rclone_version }} on the share
+  when: rclone_installed.rc != 0 or
+        rclone_installed.stdout_lines[0] | default('') != 'rclone v' + rclone_version
+  run_once: true
+  become: yes
+  block:
+    - name: temporary directory
+      tempfile:
+        state: directory
+      register: rclone_tmp
+
+    - name: download rclone {{ rclone_version }}
+      get_url:
+        url: "https://downloads.rclone.org/v{{ rclone_version }}/rclone-v{{ rclone_version }}-linux-amd64.zip"
+        dest: "{{ rclone_tmp.path }}/rclone.zip"
+        checksum: "sha256:{{ rclone_zip_sha256 }}"
+
+    - name: unpack
+      unarchive:
+        src: "{{ rclone_tmp.path }}/rclone.zip"
+        dest: "{{ rclone_tmp.path }}"
+        remote_src: yes
+
+    - name: "{{ rclone_dir }}/bin"
+      file:
+        path: "{{ rclone_dir }}/bin"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: rclone binary
+      copy:
+        src: "{{ rclone_tmp.path }}/rclone-v{{ rclone_version }}-linux-amd64/rclone"
+        dest: "{{ rclone_dir }}/bin/rclone"
+        remote_src: yes
+        owner: root
+        group: root
+        mode: '0755'
+  always:
+    - name: remove the temporary directory
+      file:
+        path: "{{ rclone_tmp.path }}"
+        state: absent
+      when: rclone_tmp.path is defined
+
+# on every node: rclone on PATH, and the GUI starter the "Rclone GUI" launcher
+# (role customize_desktop) calls
+- name: rclone on PATH
+  file:
+    src: "{{ rclone_dir }}/bin/rclone"
+    dest: /usr/local/bin/rclone
+    state: link
+    force: yes
+  become: yes
+
+- name: rclone-gui
+  template:
+    src: rclone-gui.j2
+    dest: /usr/local/bin/rclone-gui
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes

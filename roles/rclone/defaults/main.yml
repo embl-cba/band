@@ -1,0 +1,8 @@
+---
+# rclone is one static binary, kept on the share for all desktop nodes; the
+# role puts it back if it's missing or a different version. To upgrade, set
+# the version and the sha256 of rclone-v<version>-linux-amd64.zip from
+# https://downloads.rclone.org/v<version>/SHA256SUMS
+rclone_version: "1.74.0"
+rclone_zip_sha256: 61de0a78d8776fe3e080f8385ebe96d817f2ee6a6003fe36b2d9f3b49d3e36ea
+rclone_dir: /vd-containers/rclone-prog

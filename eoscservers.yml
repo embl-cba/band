@@ -6,4 +6,6 @@
   become: yes
   roles:
     - { role: common }
+    # rclone on the share (installed if missing), rclone-gui
+    - { role: rclone }
     - { role: customize_desktop }

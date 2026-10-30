@@ -6,18 +6,15 @@
     mode: '0644'
   loop: "{{ gnome_apps }}"
 
-# helper scripts the napari and rclone launchers call
+# helper script the napari launcher calls (rclone and rclone-gui: role rclone)
 - name: Launcher scripts
   become: yes
   copy:
-    src: "{{ item }}"
-    dest: "/usr/local/bin/{{ item }}"
+    src: run_napari_vgl.sh
+    dest: /usr/local/bin/run_napari_vgl.sh
     owner: root
     group: root
     mode: '0755'
-  loop:
-    - run_napari_vgl.sh
-    - rclone-gui
 
 - name: Deploy .desktop files from templates
   become: yes
