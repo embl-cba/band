@@ -1,7 +1,7 @@
 ---
 # the binary lives on the share: check and install it from one node only
 - name: installed rclone version
-  command: "{{ rclone_dir }}/bin/rclone version"
+  command: "{{ rclone_bin }} version"
   register: rclone_installed
   failed_when: false
   changed_when: false
@@ -31,9 +31,9 @@
         dest: "{{ rclone_tmp.path }}"
         remote_src: yes
 
-    - name: "{{ rclone_dir }}/bin"
+    - name: "{{ rclone_bin | dirname }}"
       file:
-        path: "{{ rclone_dir }}/bin"
+        path: "{{ rclone_bin | dirname }}"
         state: directory
         owner: root
         group: root
@@ -42,7 +42,7 @@
     - name: rclone binary
       copy:
         src: "{{ rclone_tmp.path }}/rclone-v{{ rclone_version }}-linux-amd64/rclone"
-        dest: "{{ rclone_dir }}/bin/rclone"
+        dest: "{{ rclone_bin }}"
         remote_src: yes
         owner: root
         group: root
@@ -58,7 +58,7 @@
 # (role customize_desktop) calls
 - name: rclone on PATH
   file:
-    src: "{{ rclone_dir }}/bin/rclone"
+    src: "{{ rclone_bin }}"
     dest: /usr/local/bin/rclone
     state: link
     force: yes

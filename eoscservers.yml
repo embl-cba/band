@@ -1,11 +1,14 @@
 # Desktop apps on the desktop nodes: apptainer (runs the containers in
-# /vd-containers), java and standard tools, the GNOME desktop settings (dconf:
-# screensaver, logout, background) and the application menu and launchers.
+# /vd-containers), java and standard tools, rclone and nextflow, the GNOME
+# desktop settings (dconf: screensaver, logout, background) and the
+# application menu and launchers.
 
 - hosts: 'DesktopNodes'
   become: yes
   roles:
     - { role: common }
-    # rclone on the share (installed if missing), rclone-gui
+    # rclone and nextflow: binaries on the share (/nfs/local/bin), installed
+    # if missing, linked into /usr/local/bin
     - { role: rclone }
+    - { role: nextflow }
     - { role: customize_desktop }

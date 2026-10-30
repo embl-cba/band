@@ -178,7 +178,11 @@ Not part of the full run:
   (`roles/customize_desktop`: `templates/<app>.desktop.j2`, the icon in
   `files/`, both listed in `vars/main.yml`). The apps are containers on the
   share `/vd-containers`; a new app needs its container there and a launcher
-  in the role.
+  in the role. Tools that aren't containers live in `/nfs/local/bin` and are
+  linked into `/usr/local/bin`: rclone (role `rclone`, plus `rclone-gui`) and
+  nextflow (role `nextflow`), both pinned with sha256 and reinstalled if
+  missing. Container recipes: `files/container-recipes/` (TissUUmaps) and
+  `/vd-containers/container-recipes/`.
 - `ldapserver.yml` (the LDAP server itself). Its `ldapserver` group is not in
   `inventory_tubi`; add one before using it.
 - The pre-split all-in-one playbook is kept as `attic/cluster_installation.old.yml`.

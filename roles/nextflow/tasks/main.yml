@@ -1,25 +1,31 @@
 ---
-- name: Ensure Nextflow install directory exists
+# the launcher lives on the share: install it from one node only. get_url with
+# a checksum replaces it when the file differs (other version or missing).
+- name: "{{ nextflow_bin | dirname }}"
   file:
-    path: "{{ nextflow_install_dir }}"
+    path: "{{ nextflow_bin | dirname }}"
     state: directory
     owner: root
     group: root
     mode: '0755'
+  run_once: true
+  become: yes
 
-- name: Download official Nextflow wrapper script
+- name: nextflow {{ nextflow_version }}
   get_url:
-    url: "{{ nextflow_wrapper_url }}"
-    dest: "{{ nextflow_bin_path }}"
+    url: "https://github.com/nextflow-io/nextflow/releases/download/v{{ nextflow_version }}/nextflow-{{ nextflow_version }}-dist"
+    dest: "{{ nextflow_bin }}"
+    checksum: "sha256:{{ nextflow_sha256 }}"
+    owner: root
+    group: root
     mode: '0755'
-    owner: root
-    group: root
+  run_once: true
+  become: yes
 
-- name: Install environment configuration script
-  copy:
-    src: nf.sh
-    dest: /etc/profile.d/nf.sh
-    mode: '0644'
-    owner: root
-    group: root
-
+- name: nextflow on PATH
+  file:
+    src: "{{ nextflow_bin }}"
+    dest: /usr/local/bin/nextflow
+    state: link
+    force: yes
+  become: yes

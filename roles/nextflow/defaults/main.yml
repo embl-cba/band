@@ -1,5 +1,9 @@
 ---
-nextflow_install_dir: "/opt/nf"
-nextflow_bin_path: "/opt/nf/nextflow"
-nextflow_wrapper_url: "https://get.nextflow.io"
-
+# Nextflow as the self-contained "-dist" launcher (no download at first run),
+# on the share for all desktop nodes; runs on the java 21 from role common.
+# Each user's runs keep their files in ~/.nextflow. To upgrade, set the version
+# and the sha256 of nextflow-<version>-dist from the GitHub release
+# (https://github.com/nextflow-io/nextflow/releases).
+nextflow_version: "26.10.4"
+nextflow_sha256: 2cbda6e7fdbbb1e7a413973eff549653f566ba6bb7bdfbb58eb78d0f831fdec4
+nextflow_bin: /nfs/local/bin/nextflow
