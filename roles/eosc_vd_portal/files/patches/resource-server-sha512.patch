@@ -1,0 +1,21 @@
+# Applied to keycloak-resource-server (git.embl.org/grp-cbbcs/keycloak-resource-server, master)
+# to build resource-server-0.0.4-sha512.jar: sign user certificates with RSA/SHA-512
+# instead of SHA-1, which sshd on RHEL/Rocky 9 rejects. Build:
+#   mvn -Drelease.version=0.0.4-sha512 -DskipTests package   (JDK 11)
+--- src/main/java/au/org/massive/oauth2_hpc/ssh/SSHCertificateGenerator.java.orig	2026-10-30 10:32:16.639073858 +0000
++++ src/main/java/au/org/massive/oauth2_hpc/ssh/SSHCertificateGenerator.java	2026-10-30 10:32:16.655074107 +0000
+@@ -192,10 +192,12 @@
+ 		ByteArrayOutputStream buf = new ByteArrayOutputStream();
+ 		DataOutputStream out1 = new DataOutputStream(buf);
+ 		try {
+-			Signature signature = Signature.getInstance("SHA1withRSA", new BouncyCastleProvider());
++			// RSA/SHA-512 (RFC 8332): sshd on RHEL/Rocky 9 rejects SHA-1 ("ssh-rsa")
++			// CA signatures. The CA key itself stays type ssh-rsa (writeValue(RSAPublicKey)).
++			Signature signature = Signature.getInstance("SHA512withRSA", new BouncyCastleProvider());
+ 			signature.initSign(privKey);
+ 			signature.update(dataToSign);
+-			writeValue("ssh-rsa", out1);
++			writeValue("rsa-sha2-512", out1);
+ 			writeValue(signature.sign(), out1);
+ 		} catch (NoSuchAlgorithmException e) {
+ 			throw new RuntimeException(e);

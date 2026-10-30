@@ -12,7 +12,8 @@ portal_client_version: 0.0.1
 portal_client_file: "client-{{ portal_client_version }}-log4j-2.24.3.war"
 
 ### resource server
-resource_server_version: 0.0.4
+# 0.0.4 rebuilt with files/patches/resource-server-sha512.patch (SHA-512 certs)
+resource_server_version: 0.0.4-sha512
 
 ### group resource server
 gr_resource_server_version: 0.0.2
@@ -26,9 +27,9 @@ eosc_js_version: tubi.20261030
 ### (sha256 checked against archive.apache.org); guacd must be the same version
 guacamole_version: 1.6.0
 
-### eosc.json: Slurm commands on the login node (becomes /opt/slurm/bin once
-### that symlink exists on the cluster)
-portal_slurm_bin: /opt/slurm-25.11.4/bin
+### eosc.json: Slurm commands on the login node; /opt/slurm is a symlink to the
+### installed version (slurm-common), so a Slurm upgrade needs no portal change
+portal_slurm_bin: /opt/slurm/bin
 ### desktop sizes offered by the portal (nodes: 8 CPUs, 82 GB, 1 GPU each)
 portal_desktop:
   ppn:   {default: 2,   min: 1, max: 8}
@@ -122,6 +123,6 @@ portal_artifacts:
   - {name: "client-0.0.1-log4j-2.24.3.war",      sha256: bb985e18a29d221df5c6889a81f73a1ba74df24772698748dc1a9f8e5d30afaf}
   - {name: "guacamole-1.6.0.war",                sha256: b41ceb1e2df010b54db563e0b00edb8d5fe9f073c6168462e4c978df0fc6e716}
   - {name: "massive-guacamole-remote-1.6.0.jar", sha256: cedde18faea862b84fcf58c1f5d6ae3601becf03b54ac5bf0b55fecde7782553}
-  - {name: "resource-server-0.0.4.jar",          sha256: 511afe594eef5b54afad2a6a62b0e955bc59e8332e7920cdd4084d04f2a8cd3e}
+  - {name: "resource-server-0.0.4-sha512.jar",   sha256: ae70ee0f6c37f70ff2334cd93fbaf25f534e229961e3b81e1cfda60bd4d4e9f8}
   - {name: "eosc-group-rs-0.0.2.jar",            sha256: 37170d94e66f02dc9e0f659fd470bf83a885fffc4456aa81ffbaaecced24f2e4}
   - {name: "eosc-js.tubi.20261030.tar.gz",       sha256: 6079509cc630b15ff1ae9f2ef0f307b0b739b3474ee58eaf6de839e5eb9ee747}

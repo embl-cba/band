@@ -4,8 +4,11 @@
 - hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
   tasks:
   - include_vars: vars/passwords.yml
+    tags: always
   - include_vars: vars/names.yml
+    tags: always
   - include_vars: vars/slurm.yml
+    tags: always
 
 # slurm needs every node to resolve every other node by name
 - hosts: 'ManagementNodes:LoginNodes:DesktopNodes'

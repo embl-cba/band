@@ -1,0 +1,28 @@
+---
+# Let users log in with the ssh certificates the portal's resource server
+# signs (files/server_ca.pub; principal = user name). Only adds the CA:
+# password, key and other sshd settings stay as they are.
+- name: portal CA public key
+  copy:
+    src: server_ca.pub
+    dest: /etc/ssh/band-portal-ca.pub
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: reload sshd
+
+# a drop-in, so sshd_config itself is untouched. The file is checked on its
+# own before it is put in place, the full config again before the reload.
+- name: trust the portal CA for user certificates
+  copy:
+    dest: /etc/ssh/sshd_config.d/40-band-portal-ca.conf
+    content: |
+      # managed by ansible (portal_ca_trust)
+      TrustedUserCAKeys /etc/ssh/band-portal-ca.pub
+    owner: root
+    group: root
+    mode: '0600'
+    validate: /usr/sbin/sshd -t -f %s
+  become: yes
+  notify: reload sshd

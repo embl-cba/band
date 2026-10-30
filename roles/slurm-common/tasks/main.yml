@@ -19,6 +19,16 @@
   file: dest={{ slurm_dir }}/etc state=directory
   become: yes
 
+# version-independent path, e.g. for the portal's eosc.json (/opt/slurm/bin/...)
+- name: /opt/slurm points to the installed Slurm
+  file:
+    src: "{{ slurm_dir }}"
+    dest: /opt/slurm
+    state: link
+    force: yes
+  become: yes
+  tags: slurm_symlink
+
 - name: make sure slurm lock dir exists
   file: dest=/var/lock/subsys state=directory owner=root group=root mode=755
   become: yes

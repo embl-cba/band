@@ -23,8 +23,10 @@
   file: path="{{ slurm_dir }}/etc" state=directory
   become: yes
 
+# must belong to SlurmUser: slurmdbd re-reads it as slurm on SIGHUP (the
+# daily logrotate reload), and dies if it can't
 - name: install slurmdb.conf
-  copy: src=files/slurmdbd.conf dest={{ slurm_dir }}/etc/slurmdbd.conf owner=root mode=600
+  copy: src=files/slurmdbd.conf dest={{ slurm_dir }}/etc/slurmdbd.conf owner=slurm group=slurm mode=600
   become: yes
   when: slurm_dir is defined
 

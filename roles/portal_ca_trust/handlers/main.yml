@@ -1,0 +1,5 @@
+---
+# reload, not restart: open sessions are kept; the full config is checked first
+- name: reload sshd
+  shell: /usr/sbin/sshd -t && systemctl reload sshd
+  become: yes

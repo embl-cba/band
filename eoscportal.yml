@@ -9,7 +9,7 @@
 
 - hosts: 'LoginNodes:DesktopNodes'
   roles:
-  - { role: jasons_ssh_ca }
+  - { role: portal_ca_trust }
 
 
 - hosts: 'PortalNodes'
