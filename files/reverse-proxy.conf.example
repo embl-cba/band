@@ -1,0 +1,84 @@
+# nginx site on the reverse proxy in front of the portal (not deployed by
+# ansible; the proxy is managed by hand). TLS ends here, everything else goes
+# to the portal VM over plain http. Replace band.example.org with
+# site_portal_hostname and 10.0.0.21 with the band-portal address.
+# Keycloak is a separate server behind the same proxy (its own site).
+#
+# Portal side:  80 nginx (web app), 8080 Tomcat (/client, /guacamole),
+#               9001 eosc-rs (/kc), 9002 eosc-group-rs (/grouprs)
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name band.example.org;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_certificate /etc/letsencrypt/live/band.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/band.example.org/privkey.pem;
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout  10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+
+    location / {
+        proxy_pass http://10.0.0.21;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /client {
+            proxy_pass http://10.0.0.21:8080/client;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+            proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /guacamole {
+        proxy_pass http://10.0.0.21:8080/guacamole;
+    }
+
+    location /guacamole/websocket-tunnel {
+        proxy_pass http://10.0.0.21:8080/guacamole/websocket-tunnel;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+    }
+
+    location /kc {
+        proxy_pass http://10.0.0.21:9001/kc;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    # trailing slashes: /grouprs/api/... reaches eosc-group-rs as /api/...
+    location /grouprs/ {
+            proxy_pass http://10.0.0.21:9002/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+            proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    error_page 404 /404.html;
+        location = /40x.html {
+    }
+
+    error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+    }
+
+
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name band.example.org www.band.example.org;
+
+    # Redirect HTTP to HTTPS
+    return 301 https://$host$request_uri;
+}
