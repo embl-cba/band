@@ -1,3 +1,4 @@
-guacd-host: {{eosc_portal_hostname}}
+# guacd runs on the portal itself (docker, guacamole/guacd:{{ guacamole_version }})
+guacd-host: localhost
 guacd-port: {{guad_port}}
-auth-provider: au.org.massive.guacamole.auth.CookiesAuthenticationProvider
+# the BAND extension registers its auth provider via guac-manifest.json

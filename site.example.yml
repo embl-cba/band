@@ -15,6 +15,7 @@ site_hosts:
   node-7:      10.0.0.19
   node-8:      10.0.0.20
   band-portal: 10.0.0.21
+  band-portal-old: 10.0.0.22
 
 # kernel domainname on all nodes (0_base)
 site_domain: "cluster.example.org"

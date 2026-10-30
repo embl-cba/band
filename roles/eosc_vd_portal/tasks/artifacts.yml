@@ -1,0 +1,16 @@
+---
+# The war/jar/tarball binaries are not in git. Fetch any that are missing
+# into this role's files/ on the Ansible host, checked against the pinned
+# sha256; files already there are only checksummed, not downloaded again.
+- name: fetch portal artifacts to the Ansible host
+  get_url:
+    url: "{{ portal_artifacts_url }}/{{ item.name }}"
+    dest: "{{ role_path }}/files/{{ item.name }}"
+    checksum: "sha256:{{ item.sha256 }}"
+    mode: '0644'
+  loop: "{{ portal_artifacts }}"
+  loop_control:
+    label: "{{ item.name }}"
+  delegate_to: localhost
+  run_once: true
+  become: false

@@ -2,6 +2,7 @@
 ## For now, this role ONLY WORKS with Ubuntu (targeting 18.04)
 ---
 - include_vars: "main.yml"
+- import_tasks: artifacts.yml
 - include_vars: "{{ ansible_distribution }}_{{ ansible_distribution_version }}_{{ ansible_architecture }}.yml"
 ##################################################################
 ###### neccessary packages
@@ -37,11 +38,13 @@
     url: "{{ gson_24_url }}"
     dest: "{{ guacamole_home }}/lib/gson-2.4.jar"
 
-    #- name: copy massive plugin client
-    #  become: yes
-    #  get_url:
-    #    url: "{{ massive_plugin_package }}"
-    #    dest: "{{ guacamole_home }}/extensions/massive-guacamole-remote-{{massive_plugin_version}}.jar"
+- name: install the BAND guacamole extension
+  become: yes
+  copy:
+    src: "massive-guacamole-remote-{{ massive_plugin_version }}.jar"
+    dest: "{{ guacamole_home }}/extensions/massive-guacamole-remote-{{ massive_plugin_version }}.jar"
+    owner: root
+    mode: '0644'
 
 
 - name: templating guacamole.properties 
@@ -73,16 +76,19 @@
 
 - name: copy client to tomcat
   become: yes
-  get_url:
-    url: "{{ portal_client_package }}"
+  copy:
+    src: "{{ portal_client_file }}"
     dest: "{{ tomcat_dir }}/webapps/client.war"
+    owner: root
+    mode: '0644'
 
 - name: copy guacamole client
   become: yes
-  get_url:
-    url: "{{ guacamole_package }}"
+  copy:
+    src: "guacamole-{{ guacamole_version }}.war"
     dest: "{{ tomcat_dir }}/webapps/guacamole.war"
-    checksum: sha256:93f66f43f4ea77011dc44df2aeeb297dd270cb0f34593d221e58968216a469cf
+    owner: root
+    mode: '0644'
 
 ## Centos is in /usr/lib
 - name: copy tomcat systemd
@@ -177,9 +183,11 @@
 
 ### eosc resource server
 - name: copy resource server
-  get_url:
-    url: "{{ resource_server_package }}"
+  copy:
+    src: "resource-server-{{ resource_server_version }}.jar"
     dest: "{{ eosc_dir }}/resource-server-{{ resource_server_version }}.jar"
+    owner: root
+    mode: '0644'
 
 - name: templating eosc_security.properties 
   template: 
@@ -219,9 +227,11 @@
 
 ### group resoure server
 - name: copy group resource server
-  get_url:
-    url: "{{gr_resource_server_package}}"
-    dest: "{{eosc_dir}}/eosc-group-rs-{{gr_resource_server_version}}.jar"
+  copy:
+    src: "eosc-group-rs-{{ gr_resource_server_version }}.jar"
+    dest: "{{ eosc_dir }}/eosc-group-rs-{{ gr_resource_server_version }}.jar"
+    owner: root
+    mode: '0644'
 
 - name: templating eosc_grouprs_security.properties 
   template: 
@@ -258,20 +268,44 @@
     name: eosc-group-rs
     daemon_reload: yes
 
-############# /var/www/html/js
-- name: Create /var/www/html/eosc-version if not exists
+############# /var/www/html/eosc-js (static front end, served by nginx)
+- name: Create /var/www/html/eosc-js-<version>
   file:
     path: "/var/www/html/eosc-js-{{eosc_js_version}}"
     state: directory
     mode: '0755'
+  become: yes
 
-- name: symlink to eosc-group-rs.service
+- name: unpack the front end
+  unarchive:
+    src: "eosc-js.{{ eosc_js_version }}.tar.gz"
+    dest: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    extra_opts: [--strip-components=1, --no-same-owner]
+    creates: "/var/www/html/eosc-js-{{eosc_js_version}}/index.html"
+  become: yes
+
+- name: drop editor backups shipped in the tarball
+  file:
+    path: "/var/www/html/eosc-js-{{eosc_js_version}}/eosc-landingpage/eosc-landingpage.html~"
+    state: absent
+  become: yes
+
+# app.js has the portal's public name for the API base URLs
+- name: point the front end at this portal
+  replace:
+    path: "/var/www/html/eosc-js-{{eosc_js_version}}/app.js"
+    regexp: "https://[^/']+/(kc|grouprs)/"
+    replace: "https://{{ eosc_portal_hostname }}/\\1/"
+  become: yes
+
+- name: symlink /var/www/html/eosc-js to the current version
   file:
     src: "/var/www/html/eosc-js-{{eosc_js_version}}"
     dest: /var/www/html/eosc-js
     owner: root
     group: root
     state: link
+    force: yes
   become: yes
 
 

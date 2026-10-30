@@ -12,3 +12,7 @@ __pycache__/
 # are site.example.yml and files/etcHosts.example
 /group_vars/all/site.yml
 /files/etcHosts
+# portal binaries come from a GitHub release (roles/eosc_vd_portal/tasks/artifacts.yml)
+/roles/eosc_vd_portal/files/*.war
+/roles/eosc_vd_portal/files/*.jar
+/roles/eosc_vd_portal/files/eosc-js.*.tar.gz

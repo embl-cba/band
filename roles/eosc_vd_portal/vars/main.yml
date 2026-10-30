@@ -3,32 +3,31 @@ apache_tomcat_version: 9.0.102
 apache_tomcat_url: "https://dlcdn.apache.org/tomcat/tomcat-9/v{{apache_tomcat_version}}/bin/apache-tomcat-{{apache_tomcat_version}}.tar.gz"
   
 
-### portal client
+### portal client: the build running on the tubi portal since 2024-11, with
+### its bundled log4j 2.5 (Log4Shell) replaced by 2.24.3 (Apache-signed jars)
 portal_client_version: 0.0.1
-portal_client_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/client.war"
+portal_client_file: "client-{{ portal_client_version }}-log4j-2.24.3.war"
 
 ### resource server
 resource_server_version: 0.0.4
-resource_server_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/resource-server-0.0.4.jar"
 
 ### group resource server
 gr_resource_server_version: 0.0.2
-gr_resource_server_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/eosc-group-rs-0.0.2.jar"
 
 ### eosc portal
-eosc_js_version: 0.0.2
-eosc_js_package: "https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/eosc-js.tar"
+# files/eosc-js.<version>.tar.gz: the web front end as running on the tubi
+# portal on 2026-10-30 (with its local edits); unpacks to eosc-js/
+eosc_js_version: tubi.20261030
 
-### guacamole
-guacamole_version: 1.0.0
-guacamole_package: "http://archive.apache.org/dist/guacamole/{{guacamole_version}}/binary/guacamole-{{guacamole_version}}.war"
+### guacamole: files/guacamole-<version>.war is the official Apache release
+### (sha256 checked against archive.apache.org); guacd must be the same version
+guacamole_version: 1.6.0
 
 ### guacamole home
 guacamole_home: /etc/guacamole
 
-### massive plugin
-massive_plugin_version: 1.0.0
-massive_plugin_package: https://git.embl.de/grp-cbbcs/band-artifacts/-/raw/main/massive-guacamole-remote-1.0.0.jar
+### massive plugin (BAND authentication extension), built for guacamole_version
+massive_plugin_version: 1.6.0
 ## gson 2.4
 gson_24_url: https://repo1.maven.org/maven2/com/google/code/gson/gson/2.4/gson-2.4.jar
 
@@ -97,3 +96,14 @@ eosc_admin_email_password: !vault |
           66373936643664333863336630363330343332313630333363393730633134623731623038363062
           6563616132373133610a366263383039383764383737616131646338353039306136363236313234
           3830
+
+### binaries, not in git: published as assets of a GitHub release and fetched
+### to this role's files/ on the Ansible host when missing (tasks/artifacts.yml)
+portal_artifacts_url: "https://github.com/embl-cba/band/releases/download/portal-artifacts-tubi-20261030"
+portal_artifacts:
+  - {name: "client-0.0.1-log4j-2.24.3.war",      sha256: bb985e18a29d221df5c6889a81f73a1ba74df24772698748dc1a9f8e5d30afaf}
+  - {name: "guacamole-1.6.0.war",                sha256: b41ceb1e2df010b54db563e0b00edb8d5fe9f073c6168462e4c978df0fc6e716}
+  - {name: "massive-guacamole-remote-1.6.0.jar", sha256: cedde18faea862b84fcf58c1f5d6ae3601becf03b54ac5bf0b55fecde7782553}
+  - {name: "resource-server-0.0.4.jar",          sha256: 511afe594eef5b54afad2a6a62b0e955bc59e8332e7920cdd4084d04f2a8cd3e}
+  - {name: "eosc-group-rs-0.0.2.jar",            sha256: 37170d94e66f02dc9e0f659fd470bf83a885fffc4456aa81ffbaaecced24f2e4}
+  - {name: "eosc-js.tubi.20261030.tar.gz",       sha256: 6079509cc630b15ff1ae9f2ef0f307b0b739b3474ee58eaf6de839e5eb9ee747}
