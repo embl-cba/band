@@ -29,3 +29,12 @@
     state: link
     force: yes
   become: yes
+
+- name: per-user Nextflow settings
+  copy:
+    src: nf.sh
+    dest: /etc/profile.d/nf.sh
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
