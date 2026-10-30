@@ -17,7 +17,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import hashlib
 import json
-import errno
 
 DRY_RUN = '--dry-run' in sys.argv
 SEND_EMAIL = {{ provision_send_email | bool }}
@@ -94,24 +93,6 @@ def write_desktop_file_folder(desktop_path, launchername, type, url, name, icon)
     _file.write("Name=%s\n"%(name))
     _file.write("Icon=%s\n"%(icon))
     _file.close()
-
-def write_vnc_xstart(path):
-    filename=path + "/.vnc/xstartup"
-    if not os.path.exists(os.path.dirname(filename)):
-        try:
-            os.makedirs(os.path.dirname(filename))
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
-
-    with open(filename,"w") as f:
-        f.write("#!/bin/sh\n")
-        f.write("unset SESSION_MANAGER\n")
-        f.write("unset DBUS_SESSION_BUS_ADDRESS\n")
-        f.write("exec mate-session\n")
-        f.close()
-
-    os.chmod(filename,755)
 
 def mk_desktop(username, path):
     #create desktop if not exists
