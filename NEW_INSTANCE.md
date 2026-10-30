@@ -9,7 +9,7 @@ Everything specific to this site lives in two files that git ignores:
 
 | File | Holds | Template in git |
 |---|---|---|
-| `group_vars/all/site.yml` | host addresses (`site_hosts`, used by `inventory_tubi`), domain, portal host name, LDAP host, Keycloak realm URL and client ids, portal admin/notify e-mail and SMTP host | `site.example.yml` |
+| `group_vars/all/site.yml` | host addresses (`site_hosts`, used by `inventory_tubi`), domain, portal host name, LDAP host, Keycloak realm URL and client ids | `site.example.yml` |
 | `files/etcHosts` | `/etc/hosts` for all nodes, incl. the LDAP server and `nfs-server` | `files/etcHosts.example` |
 
 Ansible loads `group_vars/all/site.yml` by itself (it sits next to the
@@ -60,8 +60,7 @@ decrypted. Encrypted:
 - single values (`!vault`): `ldapBindDNPassword`, `ldapManagerPassword` in
   `vars/ldapConfig.yml` and `roles/eosc_ldapserver/vars/main.yml`
   (plus `testPassword`), `ca_pass_prase` in `vars/eosc-portal.yml`, the OIDC
-  client secrets and `eosc_admin_email_password` in
-  `roles/eosc_vd_portal/vars/main.yml`.
+  client secrets in `roles/eosc_vd_portal/vars/main.yml`.
 
 Edit or read them with:
 

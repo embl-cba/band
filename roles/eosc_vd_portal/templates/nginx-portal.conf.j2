@@ -1,6 +1,6 @@
 # Front end only; the reverse proxy terminates TLS for {{ eosc_portal_hostname }}
-# and sends / here, /client and /guacamole to Tomcat (:8080), /kc to eosc-rs
-# (:{{ resource_server_port }}) and /grouprs to eosc-group-rs (:{{ group_resource_server_port }}).
+# and sends / here, /client and /guacamole to Tomcat (:8080) and /kc to eosc-rs
+# (:{{ resource_server_port }}).
 server {
     listen 80 default_server;
     listen [::]:80 default_server;

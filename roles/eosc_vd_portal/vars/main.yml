@@ -15,9 +15,6 @@ portal_client_file: "client-{{ portal_client_version }}-log4j-2.24.3.war"
 # 0.0.4 rebuilt with files/patches/resource-server-sha512.patch (SHA-512 certs)
 resource_server_version: 0.0.4-sha512
 
-### group resource server
-gr_resource_server_version: 0.0.2
-
 ### eosc portal
 # files/eosc-js.<version>.tar.gz: the web front end as running on the tubi
 # portal on 2026-10-30 (with its local edits); unpacks to eosc-js/
@@ -91,30 +88,10 @@ eosc_resource_clientsecret: !vault |
 eosc_resource_clientid: "{{ site_oidc_resource_clientid }}"
 eosc_resource_resourceid: "{{ site_oidc_resource_resourceid }}"
 eosc_resource_authority_check: hasAuthority('USER')
-# group manager resource server
-eosc_group_resource_clientsecret: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          30343535366235353763373038313136363433343664616339363038383563376339626263623466
-          3634326337626262373365346462313434386432306135370a383464666438623235376463383835
-          34613532666266323466663064633666393238313834346363386561646464653732323563306263
-          3965646466303364640a666136626230386138633262386661663630306634333032346139633330
-          33326438393636373433363861346539626262333963346636363861326532303635623863333435
-          3830336232386130633834323338336231613033383263666237
-eosc_group_resource_clientid: "{{ site_oidc_group_clientid }}"
 
 login_host: "{{ hostvars[groups['LoginNodes'][0]]['ansible_ssh_host'] }}"
 resource_server_port: 9001
-group_resource_server_port: 9002
 guad_port: 4822
-
-# SMTP password for admin-email-* in eosc_grouprs_security.properties
-eosc_admin_email_password: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          30646661656336656334616134323330353931653863336334653561393431393030396164396638
-          3463353537313936356563346465306632393262663964320a343939633739653936636538313232
-          66373936643664333863336630363330343332313630333363393730633134623731623038363062
-          6563616132373133610a366263383039383764383737616131646338353039306136363236313234
-          3830
 
 ### binaries, not in git: published as assets of a GitHub release and fetched
 ### to this role's files/ on the Ansible host when missing (tasks/artifacts.yml)
@@ -124,5 +101,4 @@ portal_artifacts:
   - {name: "guacamole-1.6.0.war",                sha256: b41ceb1e2df010b54db563e0b00edb8d5fe9f073c6168462e4c978df0fc6e716}
   - {name: "massive-guacamole-remote-1.6.0.jar", sha256: cedde18faea862b84fcf58c1f5d6ae3601becf03b54ac5bf0b55fecde7782553}
   - {name: "resource-server-0.0.4-sha512.jar",   sha256: ae70ee0f6c37f70ff2334cd93fbaf25f534e229961e3b81e1cfda60bd4d4e9f8}
-  - {name: "eosc-group-rs-0.0.2.jar",            sha256: 37170d94e66f02dc9e0f659fd470bf83a885fffc4456aa81ffbaaecced24f2e4}
   - {name: "eosc-js.tubi.20261030.tar.gz",       sha256: 6079509cc630b15ff1ae9f2ef0f307b0b739b3474ee58eaf6de839e5eb9ee747}

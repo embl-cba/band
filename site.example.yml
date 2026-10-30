@@ -33,12 +33,7 @@ site_keycloak_realm_url: "https://auth.example.org/auth/realms/<realm>"
 site_oidc_client_id: "<portal client id>"
 site_oidc_resource_clientid: "<resource server client id>"
 site_oidc_resource_resourceid: "<portal client id>"
-site_oidc_group_clientid: "<group manager client id>"
 
-# portal group manager: sender address (SMTP password is vaulted), problem reports, SMTP host
-site_admin_email: "admin@example.org"
-site_admin_notify_email: "support@example.org"
-site_admin_smtp_host: "smtp.example.org"
 
 # reverse proxy in front of the portal (TLS, routing; see NEW_INSTANCE.md)
 site_reverse_proxy: "10.0.0.30"

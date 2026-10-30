@@ -1,7 +1,6 @@
 ---
 # /opt/eosc: the resource server (eosc-rs, :9001, runs the eosc.json commands
-# on the login node over ssh with certificates signed by the portal's CA) and
-# the group resource server (eosc-group-rs, :9002, LDAP groups). Both run as
+# on the login node over ssh with certificates signed by the portal's CA), as
 # user eosc, not root.
 - name: eosc group
   group:
@@ -80,54 +79,40 @@
   become: yes
   notify: restart eosc-rs
 
-- name: properties of both servers (OIDC, CA passphrase, LDAP, mail)
+- name: eosc_security.properties (OIDC, CA passphrase)
   template:
-    src: "{{ item }}.j2"
-    dest: "{{ eosc_dir }}/{{ item }}"
+    src: eosc_security.properties.j2
+    dest: "{{ eosc_dir }}/eosc_security.properties"
     owner: root
     group: eosc
     mode: '0640'
-  loop:
-    - eosc_security.properties
-    - eosc_grouprs_security.properties
   become: yes
-  notify:
-    - restart eosc-rs
-    - restart eosc-group-rs
+  notify: restart eosc-rs
 
-######## jars and services
-- name: server jars
+######## jar and service
+- name: resource server jar
   copy:
-    src: "{{ item }}"
-    dest: "{{ eosc_dir }}/{{ item }}"
+    src: "resource-server-{{ resource_server_version }}.jar"
+    dest: "{{ eosc_dir }}/resource-server-{{ resource_server_version }}.jar"
     owner: root
     group: eosc
     mode: '0644'
-  loop:
-    - "resource-server-{{ resource_server_version }}.jar"
-    - "eosc-group-rs-{{ gr_resource_server_version }}.jar"
   become: yes
-  notify:
-    - restart eosc-rs
-    - restart eosc-group-rs
+  notify: restart eosc-rs
 
-- name: systemd units
+- name: systemd unit
   template:
-    src: "{{ item }}.service.j2"
-    dest: "/etc/systemd/system/{{ item }}.service"
+    src: eosc-rs.service.j2
+    dest: /etc/systemd/system/eosc-rs.service
     owner: root
     mode: '0644'
-  loop: [eosc-rs, eosc-group-rs]
   become: yes
-  notify:
-    - restart eosc-rs
-    - restart eosc-group-rs
+  notify: restart eosc-rs
 
-- name: services enabled and started
+- name: service enabled and started
   systemd:
-    name: "{{ item }}"
+    name: eosc-rs
     enabled: yes
     state: started
     daemon_reload: yes
-  loop: [eosc-rs, eosc-group-rs]
   become: yes

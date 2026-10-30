@@ -1,6 +1,6 @@
 ---
 # The static front end, served by nginx on port 80. TLS and the routing of
-# /client, /guacamole, /kc and /grouprs are done by the reverse proxy.
+# /client, /guacamole and /kc are done by the reverse proxy.
 - name: Create /var/www/html/eosc-js-<version>
   file:
     path: "/var/www/html/eosc-js-{{eosc_js_version}}"
