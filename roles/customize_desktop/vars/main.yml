@@ -13,6 +13,7 @@ gnome_apps:
   - icon: jupyter.png
   - icon: knime.png
   - icon: libre.png
+  - icon: mib3.png
   - icon: napari.png
   - icon: nn.png
   - icon: omero.png
