@@ -1,0 +1,2 @@
+# a local "mvn package" output must not reach the image (it is built inside)
+eosc-keycloak-extension/target

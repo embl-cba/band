@@ -1,0 +1,216 @@
+---
+- name: docker
+  apt:
+    name: [docker.io, python3-docker]
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: docker daemon settings (DNS, MTU)
+  copy:
+    dest: /etc/docker/daemon.json
+    content: "{{ {'dns': keycloak_docker_dns, 'mtu': keycloak_docker_mtu | int} | to_nice_json }}\n"
+    owner: root
+    group: root
+    mode: '0644'
+  register: keycloak_daemon_json
+  become: yes
+
+- name: docker running
+  systemd:
+    name: docker
+    state: "{{ 'restarted' if keycloak_daemon_json is changed else 'started' }}"
+    enabled: yes
+  become: yes
+
+######## image: extension (built from source), theme, LDAP certificate
+- name: "{{ keycloak_dir }}/build"
+  file:
+    path: "{{ keycloak_dir }}/build"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: build context
+  copy:
+    src: "{{ item }}"
+    dest: "{{ keycloak_dir }}/build/"
+    owner: root
+    group: root
+  loop:
+    - eosc-keycloak-extension
+    - themes
+  register: keycloak_context
+  become: yes
+
+# the LDAP server's self-signed certificate, fetched from it and taken only
+# if its fingerprint is the one in site vars
+- name: LDAP certificate for the truststore
+  shell: |
+    set -o pipefail
+    new=$(mktemp)
+    echo | timeout 15 openssl s_client -connect {{ keycloak_ldap_address }}:636 \
+         -servername {{ keycloak_ldap_host }} 2>/dev/null | openssl x509 -outform PEM > $new
+    fp=$(openssl x509 -in $new -noout -fingerprint -sha256 | cut -d= -f2)
+    if [ "$fp" != "{{ keycloak_ldap_cert_sha256 | upper }}" ]; then
+      rm -f $new; echo "LDAP certificate fingerprint $fp is not the expected one" >&2; exit 1
+    fi
+    if cmp -s $new {{ keycloak_dir }}/build/ldap.pem; then rm -f $new; echo unchanged
+    else install -m 0644 $new {{ keycloak_dir }}/build/ldap.pem; rm -f $new; echo changed; fi
+  args:
+    executable: /bin/bash
+  register: keycloak_ldap_cert
+  changed_when: keycloak_ldap_cert.stdout_lines[-1] | default('') == 'changed'
+  become: yes
+
+- name: .dockerignore
+  copy:
+    src: dockerignore
+    dest: "{{ keycloak_dir }}/build/.dockerignore"
+    owner: root
+    group: root
+    mode: '0644'
+  register: keycloak_dockerignore
+  become: yes
+
+- name: Dockerfile
+  template:
+    src: Dockerfile.j2
+    dest: "{{ keycloak_dir }}/build/Dockerfile"
+    owner: root
+    group: root
+    mode: '0644'
+  register: keycloak_dockerfile
+  become: yes
+
+- name: image {{ keycloak_image }}
+  community.docker.docker_image:
+    name: "{{ keycloak_image }}"
+    source: build
+    build:
+      path: "{{ keycloak_dir }}/build"
+      pull: yes
+    force_source: "{{ keycloak_context is changed or keycloak_dockerfile is changed or keycloak_dockerignore is changed or keycloak_ldap_cert is changed }}"
+  register: keycloak_image_built
+  become: yes
+
+######## settings with secrets: in root-only files, so the container tasks
+######## below carry none and their errors stay visible
+- name: environment files
+  copy:
+    dest: "{{ keycloak_dir }}/{{ item.name }}"
+    content: |
+      {% for k, v in item.env.items() %}
+      {{ k }}={{ v }}
+      {% endfor %}
+    owner: root
+    group: root
+    mode: '0600'
+  loop:
+    - name: postgres.env
+      env:
+        POSTGRES_DB: keycloak
+        POSTGRES_USER: keycloak
+        POSTGRES_PASSWORD: "{{ keycloak_db_password }}"
+    # also read by the one-time import; KC_BOOTSTRAP_* only acts on a server start
+    - name: keycloak.env
+      env: "{{ keycloak_env | combine({'KC_BOOTSTRAP_ADMIN_USERNAME': 'admin',
+                                        'KC_BOOTSTRAP_ADMIN_PASSWORD': keycloak_admin_password}) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: keycloak_envfiles
+  no_log: true
+  become: yes
+
+######## PostgreSQL
+- name: docker network
+  community.docker.docker_network:
+    name: keycloak
+  become: yes
+
+- name: PostgreSQL data
+  file:
+    path: "{{ keycloak_dir }}/postgres"
+    state: directory
+    mode: '0700'
+  become: yes
+
+- name: PostgreSQL
+  community.docker.docker_container:
+    name: keycloak-postgres
+    image: "{{ keycloak_postgres_image }}"
+    restart_policy: unless-stopped
+    networks: [{name: keycloak}]
+    # not published: only the keycloak container reaches it
+    env_file: "{{ keycloak_dir }}/postgres.env"
+    volumes:
+      - "{{ keycloak_dir }}/postgres:/var/lib/postgresql/data"
+  become: yes
+
+- name: PostgreSQL ready
+  command: docker exec keycloak-postgres pg_isready -U keycloak -d keycloak
+  register: keycloak_pg_ready
+  until: keycloak_pg_ready.rc == 0
+  retries: 30
+  delay: 2
+  changed_when: false
+  become: yes
+
+######## Keycloak
+- name: one-time realm import
+  import_tasks: import.yml
+  tags: [never, keycloak_import]
+
+- name: Keycloak
+  community.docker.docker_container:
+    name: keycloak
+    image: "{{ keycloak_image }}"
+    restart_policy: unless-stopped
+    # docker doesn't notice a changed env file
+    recreate: "{{ keycloak_image_built is changed or keycloak_envfiles.results[1] is changed }}"
+    networks: [{name: keycloak}]
+    published_ports:
+      - "{{ keycloak_http_port }}:8080"
+      - "127.0.0.1:{{ keycloak_management_port }}:9000"
+    etc_hosts: "{{ {keycloak_ldap_host: keycloak_ldap_address} }}"
+    env_file: "{{ keycloak_dir }}/keycloak.env"
+  become: yes
+
+- name: Keycloak ready
+  uri:
+    url: "http://127.0.0.1:{{ keycloak_management_port }}{{ keycloak_http_relative_path }}/health/ready"
+  register: keycloak_ready
+  until: keycloak_ready.status == 200
+  retries: 60
+  delay: 5
+
+# the admin console is reachable through the proxy: lock accounts of the
+# master realm (admin) for a while after repeated wrong passwords
+- name: brute-force protection for the master realm
+  # kcadm runs in the container; the password goes in as an environment variable
+  shell: |
+    docker exec -e KCPASS keycloak bash -c '
+      set -e
+      K=/opt/keycloak/bin/kcadm.sh; C=/tmp/kcadm.config
+      $K config credentials --config $C --server http://localhost:8080{{ keycloak_http_relative_path }} \
+         --realm master --user admin --password "$KCPASS" >/dev/null
+      cur=$($K get realms/master --config $C --fields bruteForceProtected)
+      if [[ $cur == *"\"bruteForceProtected\" : true"* ]]; then
+        echo unchanged
+      else
+        $K update realms/master --config $C -s bruteForceProtected=true \
+           -s failureFactor=5 -s waitIncrementSeconds=60 -s maxFailureWaitSeconds=900 -s maxDeltaTimeSeconds=43200
+        echo changed
+      fi
+      rm -f $C'
+  args:
+    executable: /bin/bash
+  environment:
+    KCPASS: "{{ keycloak_admin_password }}"
+  register: keycloak_bruteforce
+  changed_when: keycloak_bruteforce.stdout_lines[-1] | default('') == 'changed'
+  no_log: true
+  become: yes

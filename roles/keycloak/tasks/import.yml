@@ -1,0 +1,82 @@
+---
+# One-time import of the old Keycloak's realm export, before Keycloak runs on
+# this database. The file (users, keys, secrets) is adapted on the Ansible host
+# (files/prepare-realm.py), copied for the import and deleted again.
+- name: an export file is given
+  assert:
+    that: keycloak_import_file | length > 0
+    fail_msg: "run with -e keycloak_import_file=/path/to/eosc-realm.json"
+
+- name: adapt the export (identity provider flows, groupmanager)
+  command: python3 -I {{ role_path }}/files/prepare-realm.py {{ keycloak_import_file }} {{ keycloak_import_local }}
+  delegate_to: localhost
+  register: keycloak_prepare
+  changed_when: true
+
+- debug:
+    var: keycloak_prepare.stdout_lines
+
+- name: Keycloak stopped for the import
+  community.docker.docker_container:
+    name: keycloak
+    state: stopped
+  failed_when: false
+  become: yes
+
+# 1000 is the keycloak user in the image
+- name: import directory
+  file:
+    path: "{{ keycloak_dir }}/import"
+    state: directory
+    owner: "1000"
+    mode: '0700'
+  become: yes
+
+- name: realm file
+  copy:
+    src: "{{ keycloak_import_local }}"
+    dest: "{{ keycloak_dir }}/import/realm.json"
+    owner: "1000"
+    mode: '0600'
+  become: yes
+
+- name: import the realm
+  community.docker.docker_container:
+    name: keycloak-import
+    image: "{{ keycloak_image }}"
+    command: ["import", "--optimized", "--file", "/import/realm.json", "--override", "false"]
+    networks: [{name: keycloak}]
+    etc_hosts: "{{ {keycloak_ldap_host: keycloak_ldap_address} }}"
+    env_file: "{{ keycloak_dir }}/keycloak.env"
+    volumes:
+      - "{{ keycloak_dir }}/import:/import:ro"
+    detach: false
+    cleanup: true
+  register: keycloak_import_run
+  become: yes
+
+- name: import log (last lines)
+  debug:
+    msg: "{{ (keycloak_import_run.container.Output | default('')).splitlines()[-15:] }}"
+
+- name: remove the realm file
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ keycloak_dir }}/import/realm.json"
+  become: yes
+
+- name: remove the local adapted copy
+  file:
+    path: "{{ keycloak_import_local }}"
+    state: absent
+  delegate_to: localhost
+
+# with --tags keycloak_import the main tasks don't run: start Keycloak here
+- name: Keycloak started again
+  community.docker.docker_container:
+    name: keycloak
+    state: started
+  failed_when: false
+  become: yes

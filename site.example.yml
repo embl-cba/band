@@ -26,8 +26,12 @@ site_domain: "cluster.example.org"
 # public name of the portal (nginx, OIDC redirect)
 site_portal_hostname: "band.example.org"
 
-# LDAP server, used as ldaps://<this>
+# LDAP server, used as ldaps://<this>; its address for hosts without DNS for it
 site_ldap_host: "ldap.example.org"
+site_ldap_address: "10.0.0.40"
+# SHA-256 fingerprint of its (self-signed) LDAPS certificate, which Keycloak trusts:
+#   openssl s_client -connect <address>:636 </dev/null | openssl x509 -noout -fingerprint -sha256
+site_ldap_cert_sha256: "AA:BB:..."
 
 # Keycloak realm the portal logs in with
 site_keycloak_realm_url: "https://auth.example.org/auth/realms/<realm>"

@@ -1,0 +1,9 @@
+# Keycloak (realm "eosc") on band-auth: PostgreSQL and Keycloak 26 in docker,
+# with the EOSC registration extension and login theme. Not part of
+# cluster_installation.yml. The realm comes once from the old Keycloak's export:
+#   ansible-playbook keycloak.yml                       # install / update
+#   ansible-playbook keycloak.yml --tags keycloak_import -e keycloak_import_file=...
+- hosts: 'AuthNodes'
+  gather_facts: true
+  roles:
+  - { role: keycloak }
