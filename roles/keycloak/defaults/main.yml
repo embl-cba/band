@@ -9,8 +9,8 @@ keycloak_maven_image_tag: "3.9.9-eclipse-temurin-21"
 # the EOSC registration step (Create EOSC User If Unique), built from this tag;
 # sha256 of GitHub's tarball of the tag
 keycloak_extension_repo: https://github.com/embl-cba/band-keycloak-flow-extension
-keycloak_extension_version: v2.0.0
-keycloak_extension_sha256: 2384f340551c52ad62301155b1893b3b74a6c6bba2e683ce6ceb053880c88af8
+keycloak_extension_version: v2.0.1
+keycloak_extension_sha256: 47dd4bca6b837abe73b7b32f809e9965b00562a3d9864fb7e8726ae38010af00
 
 # the login theme, installed as themes/<name> (the realm's loginTheme)
 keycloak_theme_repo: https://github.com/embl-cba/band-keycloak-theme

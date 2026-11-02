@@ -5,6 +5,8 @@
 
 - every identity provider (google, lsaai) uses "EOSC First Broker Login",
   so LS AAI users also get an LDAP account;
+- lsaai moves from LS AAI's old CAS endpoints (which no longer know the
+  client) to its current OIDC ones, with signature checks;
 - in that flow, the dropped "Link IDP Login" step becomes Keycloak's own
   "Automatically set existing user" (idp-auto-link);
 - the client "groupmanager" (its server is gone), its roles, its
@@ -25,6 +27,11 @@ FLOW = "EOSC First Broker Login"
 OLD_LINK, NEW_LINK = "link-idp-login-authenticator", "idp-auto-link"
 DROP_CLIENT = "groupmanager"
 PORTAL_CLIENT, INTROSPECTOR = "eosc-client", "resource"
+LSAAI = "https://login.aai.lifescience-ri.eu/oidc"
+LSAAI_CONFIG = {"issuer": LSAAI + "/", "authorizationUrl": LSAAI + "/authorize",
+                "tokenUrl": LSAAI + "/token", "userInfoUrl": LSAAI + "/userinfo",
+                "jwksUrl": LSAAI + "/jwk", "logoutUrl": LSAAI + "/endsession",
+                "useJwksUrl": "true", "validateSignature": "true"}
 
 src, dst = sys.argv[1], sys.argv[2]
 with open(src) as f:
@@ -40,6 +47,11 @@ for idp in realm.get("identityProviders", []):
         print(f"identity provider {idp['alias']}: first broker login flow "
               f"'{idp.get('firstBrokerLoginFlowAlias')}' -> '{FLOW}'")
         idp["firstBrokerLoginFlowAlias"] = FLOW
+
+for idp in realm.get("identityProviders", []):
+    if idp["alias"] == "lsaai" and "/cas/" in idp["config"].get("tokenUrl", ""):
+        idp["config"].update(LSAAI_CONFIG)
+        print(f"identity provider lsaai: endpoints -> {LSAAI}/...")
 
 for fl in realm.get("authenticationFlows", []):
     for ex in fl.get("authenticationExecutions", []):
