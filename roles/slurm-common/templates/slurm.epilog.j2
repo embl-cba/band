@@ -1,8 +1,9 @@
 #!/bin/bash
 # Runs as root on the node after every job. Cleans up after a desktop session:
-# unmounts the user's s3fs buckets and removes what VNC/X/pulseaudio leave in
-# /tmp, but only once the user has no other job on this node (those may still
-# be using them). Must always exit 0: a failing epilog drains the node.
+# unmounts the user's s3fs buckets, removes what VNC/X/pulseaudio leave in
+# /tmp and ends the lingering the prolog started, but only once the user has
+# no other job on this node (those may still be using them). Must always
+# exit 0: a failing epilog drains the node.
 user=$SLURM_JOB_USER
 uid=$(id -u "$user" 2>/dev/null) || exit 0
 
@@ -38,4 +39,8 @@ fi
 find /tmp -maxdepth 1 -user "$user" \
      \( -name 'pulse*' -o -name '.esd-*' -o -name '.X*-lock' \) -exec rm -rf -- {} + 2>/dev/null
 find /tmp/.X11-unix -maxdepth 1 -user "$user" -name 'X*' -exec rm -f -- {} + 2>/dev/null
+
+# no more lingering (prolog): logind removes /run/user/<uid> once the user has
+# no login session here either
+loginctl disable-linger "$user" 2>/dev/null
 exit 0

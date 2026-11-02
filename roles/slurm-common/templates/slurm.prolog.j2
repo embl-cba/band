@@ -1,2 +1,17 @@
-#!/bin/sh
+#!/bin/bash
+# Runs as root on the node before every job. A desktop's GNOME session needs
+# the user's runtime directory /run/user/<uid> (dconf, dbus, keyring) from its
+# first second. logind only creates it at a login, and the portal's first SSH
+# login to the node (the VNC tunnel) comes after the session has started, so
+# a user's first desktop on a node stayed black. Lingering makes logind create
+# it now and keep it while the user has jobs here; the epilog turns it off.
+# Must always exit 0: a failing prolog drains the node.
+user=$SLURM_JOB_USER
+uid=$(id -u "$user" 2>/dev/null) || exit 0
+loginctl enable-linger "$user" 2>/dev/null
+# logind starts user@<uid>, which makes the directory; wait for it (at most 10 s)
+for i in $(seq 1 20); do
+    [ -d "/run/user/$uid" ] && break
+    sleep 0.5
+done
 exit 0
