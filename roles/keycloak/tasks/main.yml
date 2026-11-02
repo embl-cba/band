@@ -124,6 +124,8 @@
     networks: [{name: keycloak}]
     # not published: only the keycloak container reaches it
     env_file: "{{ keycloak_dir }}/postgres.env"
+    log_driver: json-file
+    log_options: "{{ keycloak_log_options }}"
     volumes:
       - "{{ keycloak_dir }}/postgres:/var/lib/postgresql/data"
   become: yes
@@ -155,6 +157,8 @@
       - "127.0.0.1:{{ keycloak_management_port }}:9000"
     etc_hosts: "{{ {keycloak_ldap_host: keycloak_ldap_address} }}"
     env_file: "{{ keycloak_dir }}/keycloak.env"
+    log_driver: json-file
+    log_options: "{{ keycloak_log_options }}"
   become: yes
 
 - name: Keycloak ready
@@ -191,4 +195,65 @@
   register: keycloak_bruteforce
   changed_when: keycloak_bruteforce.stdout_lines[-1] | default('') == 'changed'
   no_log: true
+  become: yes
+
+######## nightly database backup
+- name: "{{ keycloak_backup_dir }}"
+  file:
+    path: "{{ keycloak_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+
+- name: backup script
+  template:
+    src: keycloak-backup.sh.j2
+    dest: /usr/local/sbin/keycloak-backup
+    owner: root
+    group: root
+    mode: '0750'
+  become: yes
+
+- name: backup service and timer
+  copy:
+    dest: "/etc/systemd/system/{{ item.name }}"
+    content: "{{ item.content }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - name: keycloak-backup.service
+      content: |
+        [Unit]
+        Description=Keycloak database backup (pg_dump)
+        Requires=docker.service
+        After=docker.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/sbin/keycloak-backup
+    - name: keycloak-backup.timer
+      content: |
+        [Unit]
+        Description=Keycloak database backup, nightly
+
+        [Timer]
+        OnCalendar={{ keycloak_backup_time }}
+        # catch up after the VM was off at that time
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+  loop_control:
+    label: "{{ item.name }}"
+  become: yes
+
+- name: backup timer enabled
+  systemd:
+    name: keycloak-backup.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
   become: yes

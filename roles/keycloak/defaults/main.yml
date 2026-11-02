@@ -58,3 +58,13 @@ keycloak_env:
 # and the IPv4 network has MTU 1450, smaller than docker's default 1500
 keycloak_docker_dns: ["8.8.8.8", "1.1.1.1"]
 keycloak_docker_mtu: "{{ ansible_default_ipv4.mtu }}"
+
+# nightly pg_dump of the Keycloak database, kept this many days
+keycloak_backup_dir: "{{ keycloak_dir }}/backups"
+keycloak_backup_keep_days: 14
+keycloak_backup_time: "*-*-* 00:00:00 Europe/Berlin"
+
+# container logs (docker rotates by size only)
+keycloak_log_options:
+  max-size: "10m"
+  max-file: "3"

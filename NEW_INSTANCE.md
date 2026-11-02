@@ -147,8 +147,23 @@ the redirect URIs registered at Google and LS AAI don't change.
           -e keycloak_import_file=/path/eosc-realm.json [-e keycloak_import_override=true]
 
   The export holds users, keys and client secrets: keep it out of git.
-- Backup / new instance: there is no scheduled backup. Before a rebuild (or
-  whenever you want a copy), export the realm from the running Keycloak on
+- Backup: `keycloak-backup.timer` runs `/usr/local/sbin/keycloak-backup`
+  every night at 00:00 Europe/Berlin (catches up after downtime): a `pg_dump`
+  of the database to `/opt/keycloak/backups/keycloak-<date>-<time>.dump`
+  (root only), kept 14 days. Keycloak keeps running. The backups are on the
+  VM's own disk; copy one elsewhere before rebuilding it. Restore (same
+  Keycloak version), on band-auth or a new VM after `keycloak.yml`:
+
+      sudo docker stop keycloak
+      sudo docker exec keycloak-postgres psql -U keycloak -d postgres \
+          -c 'DROP DATABASE keycloak' -c 'CREATE DATABASE keycloak'
+      sudo docker exec -i keycloak-postgres pg_restore -U keycloak -d keycloak \
+          --no-owner < /opt/keycloak/backups/keycloak-<date>-<time>.dump
+      sudo docker start keycloak
+
+  Container logs rotate at 10 MB x 3.
+- Realm export (for another Keycloak version, or a portable copy): export
+  the realm from the running Keycloak on
   band-auth (it keeps running) into a folder only root and the container's
   user (1000) can read; `--add-host` with `site_ldap_host`/`site_ldap_address`,
   else the LDAP users can't be validated during the export:

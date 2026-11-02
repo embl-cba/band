@@ -1,0 +1,14 @@
+#!/bin/bash
+# Nightly backup of the Keycloak database (systemd: keycloak-backup.timer).
+# pg_dump reads a consistent snapshot; Keycloak keeps running.
+# Restore: see NEW_INSTANCE.md (Keycloak, backup).
+set -euo pipefail
+umask 077
+D={{ keycloak_backup_dir }}
+f=$D/keycloak-$(date +%Y%m%d-%H%M).dump
+docker exec keycloak-postgres pg_dump -U keycloak -d keycloak -Fc > "$f.part"
+[ -s "$f.part" ] || { rm -f "$f.part"; echo "empty dump" >&2; exit 1; }
+mv "$f.part" "$f"
+# keep {{ keycloak_backup_keep_days }} days
+find "$D" -maxdepth 1 -name 'keycloak-*.dump' -mtime +{{ keycloak_backup_keep_days - 1 }} -delete
+echo "$f $(stat -c %s "$f") bytes, $(ls "$D"/keycloak-*.dump | wc -l) dumps kept"
