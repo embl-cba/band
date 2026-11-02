@@ -9,7 +9,7 @@ Everything specific to this site lives in two files that git ignores:
 
 | File | Holds | Template in git |
 |---|---|---|
-| `group_vars/all/site.yml` | host addresses (`site_hosts`, used by `inventory_tubi`), domain, portal host name, LDAP host, Keycloak realm URL and client ids | `site.example.yml` |
+| `group_vars/all/site.yml` | host addresses (`site_hosts`, used by `inventory_tubi`), domain, portal host name, LDAP host, address and certificate fingerprint, Keycloak realm URL and client ids, reverse proxy address | `site.example.yml` |
 | `files/etcHosts` | `/etc/hosts` for all nodes, incl. the LDAP server and `nfs-server` | `files/etcHosts.example` |
 
 Ansible loads `group_vars/all/site.yml` by itself (it sits next to the
@@ -23,6 +23,8 @@ other secrets are in the vaulted `vars/passwords.yml` (see Secrets).
 | login-0 | private | Rocky 9 | login, VNC |
 | node-1 … node-8 | private | Rocky 9 | desktop nodes, 1× Tesla V100-SXM2-32GB each |
 | band-portal | private | Ubuntu 24.04 | portal: nginx (web app), Tomcat (client, Guacamole), eosc-rs, guacd, MongoDB; behind the reverse proxy |
+| band-auth | private | Ubuntu 24.04 | Keycloak 26 (realm `eosc`) and PostgreSQL in docker; behind the reverse proxy |
+| band-auth-old | private | Ubuntu 20.04 | the former Keycloak 4.5 VM: no Keycloak running, keeps its backups; no playbook targets it |
 
 Addresses are in `inventory_tubi` / `files/etcHosts`.
 
@@ -60,7 +62,8 @@ decrypted. Encrypted:
 - single values (`!vault`): `ldapBindDNPassword`, `ldapManagerPassword` in
   `vars/ldapConfig.yml` and `roles/eosc_ldapserver/vars/main.yml`
   (plus `testPassword`), `ca_pass_prase` in `vars/eosc-portal.yml`, the OIDC
-  client secrets in `roles/eosc_vd_portal/vars/main.yml`.
+  client secrets in `roles/eosc_vd_portal/vars/main.yml`, `keycloak_db_password`
+  and `keycloak_admin_password` in `roles/keycloak/vars/main.yml`.
 
 Edit or read them with:
 
@@ -116,6 +119,49 @@ For a new instance, before the first `portal.yml` run:
 - The certificates are signed with RSA/SHA-512 (`resource-server-0.0.4-sha512.jar`,
   built with `roles/eosc_vd_portal/files/patches/resource-server-sha512.patch`);
   Rocky 9 refuses the SHA-1 signatures of the unpatched jar.
+
+## Keycloak (band-auth)
+
+`keycloak.yml` (role `keycloak`) runs Keycloak 26 and PostgreSQL in docker on
+`AuthNodes`, behind the reverse proxy
+(`files/reverse-proxy-auth.conf.example`). The public URL stays
+`https://<auth host>/auth`, so the issuer, the portal's client settings and
+the redirect URIs registered at Google and LS AAI don't change.
+
+- The image is built on the VM: the registration step from
+  [band-keycloak-flow-extension](https://github.com/embl-cba/band-keycloak-flow-extension)
+  and the login theme from
+  [band-keycloak-theme](https://github.com/embl-cba/band-keycloak-theme),
+  each a pinned tag with its sha256 (`roles/keycloak/defaults/main.yml`), and
+  the LDAP server's certificate, fetched at deploy time and used only with the
+  fingerprint `site_ldap_cert_sha256`.
+- Data: PostgreSQL in `/opt/keycloak/postgres`; both containers restart
+  unless stopped. Secrets (`roles/keycloak/vars/main.yml`: DB password, the
+  master realm's `admin` password) reach them through root-only env files in
+  `/opt/keycloak`. The `admin` password only takes effect on the very first
+  start; later change it in the admin console.
+- Realm: imported once from the old Keycloak's export, adapted by
+  `roles/keycloak/files/prepare-realm.py` (see its header):
+
+      ansible-playbook keycloak.yml --tags keycloak_import \
+          -e keycloak_import_file=/path/eosc-realm.json [-e keycloak_import_override=true]
+
+  The export holds users, keys and client secrets: keep it out of git.
+
+Keycloak 26 vs. the old 4.5, things that bit during the move (all handled by
+`prepare-realm.py` / the extension):
+- a client may introspect only tokens it is an audience of; eosc-rs (client
+  `resource`) also wants `eosc-client` in `aud`: two audience mappers on
+  `eosc-client`;
+- an ALTERNATIVE step's challenge is shown instead of trying the next step:
+  extension 2.0.1 passes an existing user on to `idp-auto-link`;
+- JavaScript authorization policies are gone; LS AAI's old CAS endpoints no
+  longer know the client (now `https://login.aai.lifescience-ri.eu/oidc/`);
+- changing an identity provider's token URL needs its client secret again.
+
+Docker on these VMs needs `dns` and `mtu` in `/etc/docker/daemon.json` (the
+role sets them): the subnet's IPv4 DNS servers don't answer containers, and
+the network's MTU is 1450.
 
 ## Hand-maintained files
 
@@ -181,6 +227,7 @@ only `ManagementNodes:LoginNodes:DesktopNodes`, never band-portal.
      `/vd-containers/container-recipes/`.
 
 Not part of the full run:
+- Keycloak: `keycloak.yml` on band-auth (see Keycloak).
 - Portal: `portal.yml` (band-portal, and the CA trust on login-0 and the
   desktop nodes). Its binaries are fetched from the GitHub release
   `portal-artifacts-tubi-20261030` (pinned sha256). The reverse proxy config is

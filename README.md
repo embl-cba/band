@@ -22,7 +22,8 @@ The Ansible code here is the deployment of the de.NBI Tübingen node
 GPU desktop nodes with NVIDIA drivers and VirtualGL, LDAP accounts, NFS homes,
 TigerVNC desktops and S3 bucket mounting. The cluster is installed by numbered
 playbooks `0_base.yml` … `7_desktop.yml`, which `cluster_installation.yml` runs
-in order; the portal VM has its own, `portal.yml`. [NEW_INSTANCE.md](NEW_INSTANCE.md) describes each step, the
+in order; the portal VM has its own, `portal.yml`, and so has its Keycloak,
+`keycloak.yml`. [NEW_INSTANCE.md](NEW_INSTANCE.md) describes each step, the
 requirements and the known pitfalls.
 
 Not in the repository, by design. Placeholders are pushed instead:
