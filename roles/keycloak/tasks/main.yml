@@ -24,7 +24,7 @@
     enabled: yes
   become: yes
 
-######## image: extension (built from source), theme, LDAP certificate
+######## image: extension and theme (from their repos' tags), LDAP certificate
 - name: "{{ keycloak_dir }}/build"
   file:
     path: "{{ keycloak_dir }}/build"
@@ -32,18 +32,6 @@
     owner: root
     group: root
     mode: '0755'
-  become: yes
-
-- name: build context
-  copy:
-    src: "{{ item }}"
-    dest: "{{ keycloak_dir }}/build/"
-    owner: root
-    group: root
-  loop:
-    - eosc-keycloak-extension
-    - themes
-  register: keycloak_context
   become: yes
 
 # the LDAP server's self-signed certificate, fetched from it and taken only
@@ -66,16 +54,6 @@
   changed_when: keycloak_ldap_cert.stdout_lines[-1] | default('') == 'changed'
   become: yes
 
-- name: .dockerignore
-  copy:
-    src: dockerignore
-    dest: "{{ keycloak_dir }}/build/.dockerignore"
-    owner: root
-    group: root
-    mode: '0644'
-  register: keycloak_dockerignore
-  become: yes
-
 - name: Dockerfile
   template:
     src: Dockerfile.j2
@@ -93,7 +71,7 @@
     build:
       path: "{{ keycloak_dir }}/build"
       pull: yes
-    force_source: "{{ keycloak_context is changed or keycloak_dockerfile is changed or keycloak_dockerignore is changed or keycloak_ldap_cert is changed }}"
+    force_source: "{{ keycloak_dockerfile is changed or keycloak_ldap_cert is changed }}"
   register: keycloak_image_built
   become: yes
 

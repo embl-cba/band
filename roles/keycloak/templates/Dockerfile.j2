@@ -1,17 +1,28 @@
-# Keycloak for BAND: the EOSC extension (built here from files/eosc-keycloak-extension),
-# the login theme and the LDAP server's certificate. Build-time options are
-# baked in (kc.sh build), so the container starts with "start --optimized".
+# Keycloak for BAND: the EOSC extension (built here from a tag of
+# {{ keycloak_extension_repo }}), the login theme (a tag of
+# {{ keycloak_theme_repo }}) and the LDAP server's certificate. Build-time options are baked in (kc.sh build), so the container
+# starts with "start --optimized".
 
 FROM maven:{{ keycloak_maven_image_tag }} AS extension
-COPY eosc-keycloak-extension /src
-RUN cd /src && mvn -q -B package
+RUN curl -fsSL -o /tmp/src.tgz {{ keycloak_extension_repo }}/archive/refs/tags/{{ keycloak_extension_version }}.tar.gz \
+ && echo "{{ keycloak_extension_sha256 }}  /tmp/src.tgz" | sha256sum -c - \
+ && mkdir /src && tar xzf /tmp/src.tgz -C /src --strip-components=1 \
+ && cd /src && mvn -q -B package
+
+# the theme, under the name the realm uses (the keycloak image has no curl)
+FROM maven:{{ keycloak_maven_image_tag }} AS theme
+RUN curl -fsSL -o /tmp/theme.tgz {{ keycloak_theme_repo }}/archive/refs/tags/{{ keycloak_theme_version }}.tar.gz \
+ && echo "{{ keycloak_theme_sha256 }}  /tmp/theme.tgz" | sha256sum -c - \
+ && mkdir -p /theme/{{ keycloak_theme_name }} \
+ && tar xzf /tmp/theme.tgz -C /theme/{{ keycloak_theme_name }} --strip-components=1 \
+ && rm -f /theme/{{ keycloak_theme_name }}/README.md
 
 FROM quay.io/keycloak/keycloak:{{ keycloak_version }} AS builder
 ENV KC_DB=postgres
 ENV KC_HTTP_RELATIVE_PATH={{ keycloak_http_relative_path }}
 ENV KC_HEALTH_ENABLED=true
 COPY --from=extension /src/target/eosc-keycloak-extension.jar /opt/keycloak/providers/
-COPY themes/ /opt/keycloak/themes/
+COPY --from=theme /theme/ /opt/keycloak/themes/
 RUN /opt/keycloak/bin/kc.sh build
 
 FROM quay.io/keycloak/keycloak:{{ keycloak_version }}

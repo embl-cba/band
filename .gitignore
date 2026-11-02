@@ -17,5 +17,3 @@ __pycache__/
 /roles/eosc_vd_portal/files/*.jar
 /roles/eosc_vd_portal/files/eosc-js.*.tar.gz
 
-# Maven build output of the Keycloak extension (built inside the image)
-roles/keycloak/files/eosc-keycloak-extension/target/
