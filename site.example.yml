@@ -15,6 +15,8 @@ site_hosts:
   node-7:      10.0.0.19
   node-8:      10.0.0.20
   band-portal: 10.0.0.21
+  # Keycloak (docker, Ubuntu 20.04); no playbook targets it yet
+  band-auth:   10.0.0.23
 
 # kernel domainname on all nodes (0_base)
 site_domain: "cluster.example.org"

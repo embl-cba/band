@@ -1,4 +1,4 @@
-- hosts: '*'
+- hosts: 'LoginNodes:DesktopNodes:PortalNodes'
   tasks:
   - include_vars: vars/eosc-portal.yml
     tags: always
