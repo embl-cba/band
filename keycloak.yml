@@ -3,6 +3,7 @@
 # cluster_installation.yml. The realm comes once from the old Keycloak's export:
 #   ansible-playbook keycloak.yml                       # install / update
 #   ansible-playbook keycloak.yml --tags keycloak_import -e keycloak_import_file=...
+#     (add -e keycloak_import_override=true to replace an imported realm)
 - hosts: 'AuthNodes'
   gather_facts: true
   roles:

@@ -44,7 +44,7 @@
   community.docker.docker_container:
     name: keycloak-import
     image: "{{ keycloak_image }}"
-    command: ["import", "--optimized", "--file", "/import/realm.json", "--override", "false"]
+    command: ["import", "--optimized", "--file", "/import/realm.json", "--override", "{{ keycloak_import_override | bool | lower }}"]
     networks: [{name: keycloak}]
     etc_hosts: "{{ {keycloak_ldap_host: keycloak_ldap_address} }}"
     env_file: "{{ keycloak_dir }}/keycloak.env"

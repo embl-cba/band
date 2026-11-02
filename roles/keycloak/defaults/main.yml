@@ -25,6 +25,8 @@ keycloak_ldap_cert_sha256: "{{ site_ldap_cert_sha256 }}"
 # host; not in git (users, keys, secrets). Run with
 #   -e keycloak_import_file=/path/eosc-realm.json --tags keycloak_import
 keycloak_import_file: ""
+# true replaces an existing realm (the final import at the switch-over)
+keycloak_import_override: false
 # the adapted copy, next to the export (same private directory); deleted after the import
 keycloak_import_local: "{{ keycloak_import_file | dirname }}/.realm-import-adapted.json"
 
@@ -36,6 +38,8 @@ keycloak_env:
   KC_HOSTNAME: "https://{{ keycloak_hostname }}{{ keycloak_http_relative_path }}"
   KC_HTTP_ENABLED: "true"
   KC_PROXY_HEADERS: xforwarded
+  # X-Forwarded-* only from the reverse proxy, not from anyone reaching :8080
+  KC_PROXY_TRUSTED_ADDRESSES: "{{ site_reverse_proxy }}"
 
 # docker on these VMs: the subnet's IPv4 DNS servers don't
 # answer, the host resolves through its IPv6 link, which containers can't use;
