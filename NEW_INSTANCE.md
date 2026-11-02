@@ -22,7 +22,7 @@ other secrets are in the vaulted `vars/passwords.yml` (see Secrets).
 | mgmt-0 | private | Rocky 9 | slurmctld, slurmdbd, MariaDB |
 | login-0 | private | Rocky 9 | login, VNC |
 | node-1 … node-8 | private | Rocky 9 | desktop nodes, 1× Tesla V100-SXM2-32GB each |
-| band-portal | private | Ubuntu 24.04 | portal: nginx (web app), Tomcat (client, Guacamole), eosc-rs, guacd, MongoDB; behind the reverse proxy |
+| band-portal | private | Ubuntu 24.04 | portal: nginx (web front end band-portal-web), Tomcat (client, Guacamole), eosc-rs, guacd, MongoDB; behind the reverse proxy |
 | band-auth | private | Ubuntu 24.04 | Keycloak 26 (realm `eosc`) and PostgreSQL in docker; behind the reverse proxy |
 | band-auth-old | private | Ubuntu 20.04 | the former Keycloak 4.5 VM: no Keycloak running, keeps its backups; no playbook targets it |
 
@@ -262,7 +262,14 @@ Not part of the full run:
 - Portal: `portal.yml` (band-portal, and the CA trust on login-0 and the
   desktop nodes). Its binaries are fetched from the GitHub release
   `portal-artifacts-tubi-20261030` (pinned sha256). The reverse proxy config is
-  `files/reverse-proxy.conf.example`.
+  `files/reverse-proxy.conf.example`. The web front end is
+  [band-portal-web](https://github.com/embl-cba/band-portal-web) (Vue): the role
+  installs the release `band_portal_web_version` (sha256 checked) and nginx
+  serves `/var/www/html/portal`, a link to it. The old AngularJS front end
+  (eosc-js) stays installed; switch back with
+  `ansible-playbook portal.yml --tags portal_web -e portal_frontend=eosc-js`.
+  A new front end version: release it in that repo, then set
+  `band_portal_web_version` and `band_portal_web_sha256`.
 - `ldapserver.yml` (the LDAP server itself). Its `ldapserver` group is not in
   `inventory_tubi`; add one before using it.
 - The pre-split all-in-one playbook is kept as `attic/cluster_installation.old.yml`.

@@ -7,6 +7,12 @@ server {
     server_name _;
     server_tokens off;
 
-    root /var/www/html/eosc-js;
+    # link to the front end in use (portal_frontend)
+    root /var/www/html/portal;
     index index.html;
+
+    # pages always fresh; assets/ have content hashes in their names
+    location ~* \.html$ {
+        add_header Cache-Control "no-cache";
+    }
 }

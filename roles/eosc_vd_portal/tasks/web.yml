@@ -1,6 +1,8 @@
 ---
-# The static front end, served by nginx on port 80. TLS and the routing of
-# /client, /guacamole and /kc are done by the reverse proxy.
+# The static front end, served by nginx on port 80 from /var/www/html/portal,
+# a link to band-portal-web (default) or to the old eosc-js, both installed
+# (portal_frontend). TLS and the routing of /client, /guacamole and /kc are
+# done by the reverse proxy.
 - name: Create /var/www/html/eosc-js-<version>
   file:
     path: "/var/www/html/eosc-js-{{eosc_js_version}}"
@@ -34,6 +36,57 @@
   file:
     src: "/var/www/html/eosc-js-{{eosc_js_version}}"
     dest: /var/www/html/eosc-js
+    owner: root
+    group: root
+    state: link
+    force: yes
+  become: yes
+
+######## band-portal-web: a release of embl-cba/band-portal-web (built files)
+- name: band-portal-web {{ band_portal_web_version }} release
+  get_url:
+    url: "{{ band_portal_web_url }}"
+    dest: "/var/www/html/band-portal-web-{{ band_portal_web_version }}.tar.gz"
+    checksum: "sha256:{{ band_portal_web_sha256 }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: /var/www/html/band-portal-web-<version>
+  file:
+    path: "/var/www/html/band-portal-web-{{ band_portal_web_version }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: unpack band-portal-web
+  unarchive:
+    src: "/var/www/html/band-portal-web-{{ band_portal_web_version }}.tar.gz"
+    dest: "/var/www/html/band-portal-web-{{ band_portal_web_version }}"
+    remote_src: yes
+    extra_opts: [--no-same-owner]
+    creates: "/var/www/html/band-portal-web-{{ band_portal_web_version }}/index.html"
+  become: yes
+
+# the release tarball keeps its builder's modes
+- name: band-portal-web files read-only
+  file:
+    path: "/var/www/html/band-portal-web-{{ band_portal_web_version }}"
+    owner: root
+    group: root
+    mode: u=rwX,g=rX,o=rX
+    recurse: yes
+  become: yes
+
+######## the one nginx serves
+- name: /var/www/html/portal -> {{ portal_frontend }}
+  file:
+    src: "{{ '/var/www/html/band-portal-web-' ~ band_portal_web_version if portal_frontend == 'band-portal-web'
+             else '/var/www/html/eosc-js-' ~ eosc_js_version }}"
+    dest: /var/www/html/portal
     owner: root
     group: root
     state: link

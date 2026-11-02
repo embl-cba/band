@@ -20,6 +20,13 @@ resource_server_version: 0.0.4-sha512
 # portal on 2026-10-30 (with its local edits); unpacks to eosc-js/
 eosc_js_version: tubi.20261030
 
+# the front end nginx serves: band-portal-web (Vue, embl-cba/band-portal-web)
+# or eosc-js (the old AngularJS one, kept installed to switch back)
+portal_frontend: band-portal-web
+band_portal_web_version: "1.0.0"
+band_portal_web_url: "https://github.com/embl-cba/band-portal-web/releases/download/v{{ band_portal_web_version }}/band-portal-web-{{ band_portal_web_version }}.tar.gz"
+band_portal_web_sha256: c70bbc1f674b47871860a7901c3bebf9ed60c4872b439654f0d7e89207ac0443
+
 ### guacamole: files/guacamole-<version>.war is the official Apache release
 ### (sha256 checked against archive.apache.org); guacd must be the same version
 guacamole_version: 1.6.0
