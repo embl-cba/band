@@ -25,3 +25,10 @@
   loop: "{{ gnome_desktop_files }}"
   loop_control:
     label: "{{ item.desktop_base }}"
+
+- name: Remove replaced .desktop files
+  become: yes
+  file:
+    path: "/usr/share/applications/{{ item }}.desktop"
+    state: absent
+  loop: "{{ gnome_desktop_files_removed | default([]) }}"

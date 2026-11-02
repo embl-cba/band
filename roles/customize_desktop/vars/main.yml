@@ -37,7 +37,7 @@ gnome_desktop_files:
   - desktop_base: cellposesam3d
   - desktop_base: cellprofiler
   - desktop_base: chimerax
-  - desktop_base: cp425
+  - desktop_base: cp428
   - desktop_base: dlc
   - desktop_base: doublecmd
   - desktop_base: fiji
@@ -60,3 +60,8 @@ gnome_desktop_files:
   - desktop_base: tissuumaps
   - desktop_base: volseg
   - desktop_base: xnd
+
+# launchers that were replaced; removed from /usr/share/applications
+# (cp425: CellProfiler 4.2.5, now cp428 = 4.2.8)
+gnome_desktop_files_removed:
+  - cp425
