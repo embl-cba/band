@@ -63,6 +63,9 @@ keycloak_docker_mtu: "{{ ansible_default_ipv4.mtu }}"
 keycloak_backup_dir: "{{ keycloak_dir }}/backups"
 keycloak_backup_keep_days: 14
 keycloak_backup_time: "*-*-* 00:00:00 Europe/Berlin"
+# copied to this NFS folder too (mounted only for the copy; the folder has to
+# exist on the share, root only); "" for local backups only
+keycloak_backup_nfs: "[{{ site_nfs_address }}]:/mnt/vd_shares/backups/keycloak"
 
 # container logs (docker rotates by size only)
 keycloak_log_options:

@@ -150,8 +150,9 @@ the redirect URIs registered at Google and LS AAI don't change.
 - Backup: `keycloak-backup.timer` runs `/usr/local/sbin/keycloak-backup`
   every night at 00:00 Europe/Berlin (catches up after downtime): a `pg_dump`
   of the database to `/opt/keycloak/backups/keycloak-<date>-<time>.dump`
-  (root only), kept 14 days. Keycloak keeps running. The backups are on the
-  VM's own disk; copy one elsewhere before rebuilding it. Restore (same
+  (root only), kept 14 days, and a copy on the NFS share in
+  `/nfs/backups/keycloak/` (`keycloak_backup_nfs`; the share is mounted only
+  for the copy, and only that folder). Keycloak keeps running. Restore (same
   Keycloak version), on band-auth or a new VM after `keycloak.yml`:
 
       sudo docker stop keycloak

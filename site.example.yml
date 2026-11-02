@@ -26,6 +26,10 @@ site_domain: "cluster.example.org"
 # public name of the portal (nginx, OIDC redirect)
 site_portal_hostname: "band.example.org"
 
+# NFS server (IPv6), as "nfs-server" in files/etcHosts; band-auth copies its
+# Keycloak backups to <this>:/mnt/vd_shares/backups/keycloak
+site_nfs_address: "2001:db8::10"
+
 # LDAP server, used as ldaps://<this>; its address for hosts without DNS for it
 site_ldap_host: "ldap.example.org"
 site_ldap_address: "10.0.0.40"

@@ -14,7 +14,9 @@ https://band.vm.fedcloud.eu
 - NEUBIAS cloud bioimage analysis: https://neubias.github.io/training-resources/cloud-based-analysis-course/index.html
 
 ## Deploy your own BAND  ## 
-  Please refer to the [WIKI page](https://git.embl.de/ysun/create-band/-/wikis/Home) for setting up BAND
+  Please refer to [NEW_INSTANCE.md](NEW_INSTANCE.md) for setting up BAND: the site values
+  to fill in, the secrets, the playbooks in order, the portal and Keycloak, and
+  the known pitfalls.
 
 ## This repository ##
 The Ansible code here is the deployment of the de.NBI Tübingen node

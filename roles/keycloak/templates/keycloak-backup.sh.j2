@@ -12,3 +12,14 @@ mv "$f.part" "$f"
 # keep {{ keycloak_backup_keep_days }} days
 find "$D" -maxdepth 1 -name 'keycloak-*.dump' -mtime +{{ keycloak_backup_keep_days - 1 }} -delete
 echo "$f $(stat -c %s "$f") bytes, $(ls "$D"/keycloak-*.dump | wc -l) dumps kept"
+{% if keycloak_backup_nfs %}
+
+# a copy on the NFS share, mounted only for this
+M=/run/keycloak-backup-nfs
+mkdir -p $M
+mount -t nfs4 -o rw,vers=4.2,proto=tcp6,hard,timeo=15,retrans=5,nosuid,nodev,noexec "{{ keycloak_backup_nfs }}" $M
+trap 'umount $M; rmdir $M' EXIT
+cp "$f" "$M/$(basename "$f").part" && mv "$M/$(basename "$f").part" "$M/$(basename "$f")"
+find "$M" -maxdepth 1 -name 'keycloak-*.dump' -mtime +{{ keycloak_backup_keep_days - 1 }} -delete
+echo "copied to {{ keycloak_backup_nfs }}, $(ls "$M"/keycloak-*.dump | wc -l) dumps there"
+{% endif %}
