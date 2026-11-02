@@ -147,6 +147,21 @@ the redirect URIs registered at Google and LS AAI don't change.
           -e keycloak_import_file=/path/eosc-realm.json [-e keycloak_import_override=true]
 
   The export holds users, keys and client secrets: keep it out of git.
+- Backup / new instance: there is no scheduled backup. Before a rebuild (or
+  whenever you want a copy), export the realm from the running Keycloak on
+  band-auth (it keeps running) into a folder only root and the container's
+  user (1000) can read; `--add-host` with `site_ldap_host`/`site_ldap_address`,
+  else the LDAP users can't be validated during the export:
+
+      sudo install -d -o 1000 -m 700 /root/kc-export
+      sudo docker run --rm --network keycloak --env-file /opt/keycloak/keycloak.env \
+          --add-host <site_ldap_host>:<site_ldap_address> -v /root/kc-export:/out \
+          band-keycloak:26.8.1 export --optimized --realm eosc --users same_file \
+          --file /out/eosc-realm.json
+
+  then import it on the new VM as above (prepare-realm.py leaves an
+  already-adapted export as it is). The users include Keycloak's own
+  service accounts (`service-account-*`).
 
 Keycloak 26 vs. the old 4.5, things that bit during the move (all handled by
 `prepare-realm.py` / the extension):
