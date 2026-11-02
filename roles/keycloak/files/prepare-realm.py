@@ -10,7 +10,11 @@
 - the client "groupmanager" (its server is gone), its roles, its
   service-account user and the admin permissions on it are removed;
 - JavaScript authorization policies (gone since Keycloak 18; the old default
-  one granted everything) and permissions applying only them are removed.
+  one granted everything) and permissions applying only them are removed;
+- the portal client's tokens get "resource" and "eosc-client" in their
+  audience: Keycloak 26 only lets a client introspect tokens it is an
+  audience of (eosc-rs introspects as "resource"), and eosc-rs then wants its
+  resource id "eosc-client" in aud (Keycloak 4.5 set aud to the client).
 
 Prints only what it changed; the files hold users, keys and secrets.
 """
@@ -20,6 +24,7 @@ import sys
 FLOW = "EOSC First Broker Login"
 OLD_LINK, NEW_LINK = "link-idp-login-authenticator", "idp-auto-link"
 DROP_CLIENT = "groupmanager"
+PORTAL_CLIENT, INTROSPECTOR = "eosc-client", "resource"
 
 src, dst = sys.argv[1], sys.argv[2]
 with open(src) as f:
@@ -88,6 +93,19 @@ if gone:
     realm["users"] = [u for u in realm.get("users", []) if u.get("serviceAccountClientId") != DROP_CLIENT]
     print(f"client {DROP_CLIENT} removed (its roles taken from {n} users, "
           f"{len(sa)} service-account user {[u['username'] for u in sa]} removed)")
+
+for c in realm.get("clients", []):
+    if c["clientId"] == PORTAL_CLIENT:
+        ms = c.setdefault("protocolMappers", [])
+        for aud in (INTROSPECTOR, PORTAL_CLIENT):
+            if not any(m.get("protocolMapper") == "oidc-audience-mapper"
+                       and m.get("config", {}).get("included.client.audience") == aud for m in ms):
+                ms.append({"name": f"{aud}-audience", "protocol": "openid-connect",
+                           "protocolMapper": "oidc-audience-mapper", "consentRequired": False,
+                           "config": {"included.client.audience": aud,
+                                      "access.token.claim": "true", "id.token.claim": "false",
+                                      "introspection.token.claim": "true"}})
+                print(f"client {PORTAL_CLIENT}: audience mapper for {aud} added")
 
 print(f"realm {realm['realm']}: {len(realm.get('users', []))} users, "
       f"{len(realm['clients'])} clients, "
