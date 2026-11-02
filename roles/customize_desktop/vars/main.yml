@@ -10,9 +10,11 @@ gnome_apps:
   - icon: doublecmd.png
   - icon: fiji.png
   - icon: ilastik.png
+  - icon: jipipe.svg
   - icon: jupyter.png
   - icon: knime.png
   - icon: libre.png
+  - icon: matlab.png
   - icon: mib3.png
   - icon: napari.png
   - icon: nn.png
@@ -34,15 +36,17 @@ gnome_desktop_files:
   - desktop_base: cellposesam
   - desktop_base: cellposesam3d
   - desktop_base: cellprofiler
-  - desktop_base: cp425
   - desktop_base: chimerax
+  - desktop_base: cp425
   - desktop_base: dlc
   - desktop_base: doublecmd
   - desktop_base: fiji
   - desktop_base: ilastik
+  - desktop_base: jipipe
   - desktop_base: jupyter
   - desktop_base: knime
   - desktop_base: libre
+  - desktop_base: matlab
   - desktop_base: mib3
   - desktop_base: napari
   - desktop_base: nninteractive
