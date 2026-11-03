@@ -29,9 +29,9 @@ eosc_js_sha256: 6079509cc630b15ff1ae9f2ef0f307b0b739b3474ee58eaf6de839e5eb9ee747
 # the front end nginx serves: band-portal-web (Vue, embl-cba/band-portal-web)
 # or eosc-js (the old AngularJS one, kept installed to switch back)
 portal_frontend: band-portal-web
-band_portal_web_version: "1.0.0"
+band_portal_web_version: "1.0.1"
 band_portal_web_url: "https://github.com/embl-cba/band-portal-web/releases/download/v{{ band_portal_web_version }}/band-portal-web-{{ band_portal_web_version }}.tar.gz"
-band_portal_web_sha256: c70bbc1f674b47871860a7901c3bebf9ed60c4872b439654f0d7e89207ac0443
+band_portal_web_sha256: 7f36621f4501de040486533e590251d9ba6105b72cab9586011b66ceb078b593
 
 ### guacamole: the official Apache release, from archive.apache.org (sha256 as
 ### published there); guacd must be the same version
