@@ -41,8 +41,12 @@
   - name: slapadd
     command: slapadd -n 2 -q -l /root/ldap-import.ldif
 
-  - name: database belongs to ldap, SELinux labels
-    shell: chown -R ldap:ldap {{ ldap_db_dir }} && restorecon -R {{ ldap_db_dir }}
+  - name: database belongs to ldap
+    shell: chown -R ldap:ldap {{ ldap_db_dir }}
+
+  - name: SELinux labels of the database
+    command: restorecon -R {{ ldap_db_dir }}
+    when: ansible_selinux.status == 'enabled'
 
   always:
   - name: start slapd

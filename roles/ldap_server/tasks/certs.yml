@@ -90,6 +90,7 @@
 - name: SELinux labels of the certificates
   command: restorecon -R {{ ldap_cert_dir }}
   changed_when: false
+  when: ansible_selinux.status == 'enabled'
   become: yes
 
 - name: CA certificate to the Ansible host (for clients and Keycloak)

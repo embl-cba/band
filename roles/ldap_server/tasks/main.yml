@@ -116,8 +116,12 @@
       content: "{{ ldap_config.checksum }}\n"
       mode: '0600'
 
-  - name: slapd.d belongs to ldap, SELinux labels
-    shell: chown -R ldap:ldap /etc/openldap/slapd.d && restorecon -R /etc/openldap/slapd.d
+  - name: slapd.d belongs to ldap
+    shell: chown -R ldap:ldap /etc/openldap/slapd.d
+
+  - name: SELinux labels of slapd.d
+    command: restorecon -R /etc/openldap/slapd.d
+    when: ansible_selinux.status == 'enabled'
 
 ######## database directory and service
 - name: database directory
@@ -129,14 +133,7 @@
     mode: '0700'
   become: yes
 
-- name: slapd listens on ldapi, ldap and ldaps
-  lineinfile:
-    path: /etc/sysconfig/slapd
-    regexp: '^SLAPD_URLS='
-    line: 'SLAPD_URLS="ldapi:/// ldap:/// ldaps:///"'
-  notify: restart slapd
-  become: yes
-
+# Rocky 9's unit runs slapd on ldap:///, ldaps:/// and ldapi:/// already
 - name: slapd enabled and running
   systemd:
     name: slapd

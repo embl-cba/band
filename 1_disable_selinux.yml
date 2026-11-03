@@ -1,6 +1,6 @@
 ---
 - name: Disable SELinux
-  hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
+  hosts: 'ManagementNodes:LoginNodes:DesktopNodes:LdapNodes'
   become: yes
   gather_facts: yes
   roles:
