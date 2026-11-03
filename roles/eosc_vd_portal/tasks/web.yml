@@ -10,10 +10,21 @@
     mode: '0755'
   become: yes
 
+- name: download the old front end
+  get_url:
+    url: "{{ eosc_js_url }}"
+    dest: "/var/www/html/eosc-js.{{ eosc_js_version }}.tar.gz"
+    checksum: "sha256:{{ eosc_js_sha256 }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
 - name: unpack the front end
   unarchive:
-    src: "eosc-js.{{ eosc_js_version }}.tar.gz"
+    src: "/var/www/html/eosc-js.{{ eosc_js_version }}.tar.gz"
     dest: "/var/www/html/eosc-js-{{eosc_js_version}}"
+    remote_src: yes
     extra_opts: [--strip-components=1, --no-same-owner]
     creates: "/var/www/html/eosc-js-{{eosc_js_version}}/index.html"
   become: yes

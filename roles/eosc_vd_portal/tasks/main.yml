@@ -5,8 +5,6 @@
   tags: always
 - include_vars: "{{ ansible_distribution }}_{{ ansible_distribution_version }}_{{ ansible_architecture }}.yml"
   tags: always
-- import_tasks: artifacts.yml
-  tags: always
 - import_tasks: base.yml
   tags: portal_base
 

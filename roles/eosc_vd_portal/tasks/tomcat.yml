@@ -124,9 +124,10 @@
   notify: restart tomcat
 
 - name: portal client war
-  copy:
-    src: "{{ portal_client_file }}"
+  get_url:
+    url: "{{ portal_client_url }}"
     dest: "{{ tomcat_dir }}/webapps/client.war"
+    checksum: "sha256:{{ portal_client_sha256 }}"
     owner: root
     group: tomcat
     mode: '0644'
@@ -134,9 +135,10 @@
   notify: restart tomcat
 
 - name: guacamole war
-  copy:
-    src: "guacamole-{{ guacamole_version }}.war"
+  get_url:
+    url: "{{ guacamole_war_url }}"
     dest: "{{ tomcat_dir }}/webapps/guacamole.war"
+    checksum: "sha256:{{ guacamole_war_sha256 }}"
     owner: root
     group: tomcat
     mode: '0644'

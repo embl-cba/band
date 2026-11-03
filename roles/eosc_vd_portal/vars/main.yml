@@ -10,15 +10,21 @@ apache_tomcat_sha512: 64b1130e719399c0a409e6996081433b16af8d9c89266c7aaa9849af70
 ### its bundled log4j 2.5 (Log4Shell) replaced by 2.24.3 (Apache-signed jars)
 portal_client_version: 0.0.1
 portal_client_file: "client-{{ portal_client_version }}-log4j-2.24.3.war"
+portal_client_url: "{{ portal_artifacts_url }}/{{ portal_client_file }}"
+portal_client_sha256: bb985e18a29d221df5c6889a81f73a1ba74df24772698748dc1a9f8e5d30afaf
 
 ### resource server
 # 0.0.4 rebuilt with files/patches/resource-server-sha512.patch (SHA-512 certs)
 resource_server_version: 0.0.4-sha512
+resource_server_url: "{{ portal_artifacts_url }}/resource-server-{{ resource_server_version }}.jar"
+resource_server_sha256: ae70ee0f6c37f70ff2334cd93fbaf25f534e229961e3b81e1cfda60bd4d4e9f8
 
 ### eosc portal
-# files/eosc-js.<version>.tar.gz: the web front end as running on the tubi
+# eosc-js.<version>.tar.gz: the web front end as running on the tubi
 # portal on 2026-10-30 (with its local edits); unpacks to eosc-js/
 eosc_js_version: tubi.20261030
+eosc_js_url: "{{ portal_artifacts_url }}/eosc-js.{{ eosc_js_version }}.tar.gz"
+eosc_js_sha256: 6079509cc630b15ff1ae9f2ef0f307b0b739b3474ee58eaf6de839e5eb9ee747
 
 # the front end nginx serves: band-portal-web (Vue, embl-cba/band-portal-web)
 # or eosc-js (the old AngularJS one, kept installed to switch back)
@@ -27,9 +33,11 @@ band_portal_web_version: "1.0.0"
 band_portal_web_url: "https://github.com/embl-cba/band-portal-web/releases/download/v{{ band_portal_web_version }}/band-portal-web-{{ band_portal_web_version }}.tar.gz"
 band_portal_web_sha256: c70bbc1f674b47871860a7901c3bebf9ed60c4872b439654f0d7e89207ac0443
 
-### guacamole: files/guacamole-<version>.war is the official Apache release
-### (sha256 checked against archive.apache.org); guacd must be the same version
+### guacamole: the official Apache release, from archive.apache.org (sha256 as
+### published there); guacd must be the same version
 guacamole_version: 1.6.0
+guacamole_war_url: "https://archive.apache.org/dist/guacamole/{{ guacamole_version }}/binary/guacamole-{{ guacamole_version }}.war"
+guacamole_war_sha256: b41ceb1e2df010b54db563e0b00edb8d5fe9f073c6168462e4c978df0fc6e716
 
 ### eosc.json: Slurm commands on the login node; /opt/slurm is a symlink to the
 ### installed version (slurm-common), so a Slurm upgrade needs no portal change
@@ -112,11 +120,7 @@ login_host: "{{ hostvars[groups['LoginNodes'][0]]['ansible_ssh_host'] }}"
 resource_server_port: 9001
 guad_port: 4822
 
-### binaries, not in git: published as assets of a GitHub release and fetched
-### to this role's files/ on the Ansible host when missing (tasks/artifacts.yml)
+### what we built ourselves (client.war, resource server) and the old front
+### end are assets of a GitHub release of this repository; each task downloads
+### its file straight to the portal, checked against the sha256 above
 portal_artifacts_url: "https://github.com/embl-cba/band/releases/download/portal-artifacts-tubi-20261030"
-portal_artifacts:
-  - {name: "client-0.0.1-log4j-2.24.3.war",      sha256: bb985e18a29d221df5c6889a81f73a1ba74df24772698748dc1a9f8e5d30afaf}
-  - {name: "guacamole-1.6.0.war",                sha256: b41ceb1e2df010b54db563e0b00edb8d5fe9f073c6168462e4c978df0fc6e716}
-  - {name: "resource-server-0.0.4-sha512.jar",   sha256: ae70ee0f6c37f70ff2334cd93fbaf25f534e229961e3b81e1cfda60bd4d4e9f8}
-  - {name: "eosc-js.tubi.20261030.tar.gz",       sha256: 6079509cc630b15ff1ae9f2ef0f307b0b739b3474ee58eaf6de839e5eb9ee747}

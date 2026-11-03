@@ -260,8 +260,13 @@ only `ManagementNodes:LoginNodes:DesktopNodes`, never band-portal.
 Not part of the full run:
 - Keycloak: `keycloak.yml` on band-auth (see Keycloak).
 - Portal: `portal.yml` (band-portal, and the CA trust on login-0 and the
-  desktop nodes). Its binaries are fetched from the GitHub release
-  `portal-artifacts-tubi-20261030` (pinned sha256). The reverse proxy config is
+  desktop nodes). No binary is in git: the portal downloads each one itself,
+  checked against the sha256 in `roles/eosc_vd_portal/vars/main.yml` —
+  Tomcat and `guacamole.war` from archive.apache.org, gson from Maven Central,
+  the front end and the Guacamole extension from their own repositories'
+  releases, and what we built here (`client.war`, the resource server jar)
+  and the old front end from this repository's release
+  `portal-artifacts-tubi-20261030`. The reverse proxy config is
   `files/reverse-proxy.conf.example`. The web front end is
   [band-portal-web](https://github.com/embl-cba/band-portal-web) (Vue): the role
   installs the release `band_portal_web_version` (sha256 checked) and nginx

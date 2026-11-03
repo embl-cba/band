@@ -91,9 +91,10 @@
 
 ######## jar and service
 - name: resource server jar
-  copy:
-    src: "resource-server-{{ resource_server_version }}.jar"
+  get_url:
+    url: "{{ resource_server_url }}"
     dest: "{{ eosc_dir }}/resource-server-{{ resource_server_version }}.jar"
+    checksum: "sha256:{{ resource_server_sha256 }}"
     owner: root
     group: eosc
     mode: '0644'
