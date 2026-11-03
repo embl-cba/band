@@ -29,7 +29,9 @@ ldap_db_maxsize: 1073741824
 ldap_ca_dir: /etc/pki/band-ldap-ca
 ldap_ca_name: "BAND LDAP CA ({{ ldap_hostname }})"
 ldap_cert_dir: /etc/openldap/certs
-ldap_cert_days: 3650
+# about 100 years: nobody has to renew them; the CA outlives the certificate
+ldap_ca_days: 36525
+ldap_cert_days: 36500
 # the CA certificate, fetched to the Ansible host for the clients and Keycloak
 ldap_ca_fetch_to: "{{ playbook_dir }}/files/ldap-ca-{{ ldap_hostname }}.crt"
 

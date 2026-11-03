@@ -36,7 +36,7 @@
     csr_content: "{{ ldap_ca_csr.csr }}"
     privatekey_path: "{{ ldap_ca_dir }}/ca.key"
     provider: selfsigned
-    selfsigned_not_after: "+{{ ldap_cert_days * 2 }}d"
+    selfsigned_not_after: "+{{ ldap_ca_days }}d"
     mode: '0644'
   become: yes
 
