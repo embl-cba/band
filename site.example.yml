@@ -32,6 +32,10 @@ site_nfs_address: "2001:db8::10"
 
 # LDAP server, used as ldaps://<this>; its address for hosts without DNS for it
 site_ldap_host: "ldap.example.org"
+# ldapserver.yml: further names its certificate covers, and the networks
+# that may reach ports 389/636
+site_ldap_alt_names: ["ldap-alt.example.org"]
+site_ldap_allowed_networks: ["10.0.0.0/24"]
 site_ldap_address: "10.0.0.40"
 # SHA-256 fingerprint of its (self-signed) LDAPS certificate, which Keycloak trusts:
 #   openssl s_client -connect <address>:636 </dev/null | openssl x509 -noout -fingerprint -sha256

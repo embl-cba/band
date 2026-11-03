@@ -1,0 +1,185 @@
+---
+- name: the rootdn password hash is set
+  assert:
+    that: ldap_root_pw_hash is defined and ldap_root_pw_hash is match('^\{(SSHA|SSHA512|CRYPT|PBKDF2)')
+    fail_msg: "ldap_root_pw_hash (vault) must be the {SSHA}... hash of {{ ldap_rootdn }}'s password"
+    quiet: true
+
+######## host name: the name the clients use
+- name: host name
+  hostname:
+    name: "{{ ldap_hostname }}"
+  become: yes
+
+# cloud-init would set the OpenStack instance name again at the next boot
+- name: cloud-init keeps the host name
+  copy:
+    dest: /etc/cloud/cloud.cfg.d/99-band-hostname.cfg
+    content: "preserve_hostname: true\n"
+    mode: '0644'
+  become: yes
+
+- name: own names in /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^{{ ansible_default_ipv4.address | regex_escape }}\s'
+    line: "{{ ansible_default_ipv4.address }} {{ ([ldap_hostname] + ldap_cert_alt_names) | join(' ') }}"
+  become: yes
+
+######## packages
+- name: Rocky's "plus" repo (openldap-servers)
+  community.general.ini_file:
+    path: /etc/yum.repos.d/rocky-extras.repo
+    section: plus
+    option: enabled
+    value: "1"
+    no_extra_spaces: true
+    mode: '0644'
+  become: yes
+
+- name: OpenLDAP server, clients, firewalld
+  dnf:
+    name: [openldap-servers, openldap-clients, firewalld, python3-cryptography]
+    state: present
+  become: yes
+
+- import_tasks: certs.yml
+
+######## cn=config
+- name: render cn=config
+  template:
+    src: slapd-config.ldif.j2
+    dest: "{{ ldap_config_ldif }}"
+    owner: root
+    group: root
+    mode: '0600'
+  register: ldap_config
+  become: yes
+
+- name: is slapd.d built from this rendering
+  stat:
+    path: /etc/openldap/slapd.d/.band-config-sha1
+  register: ldap_config_marker
+  become: yes
+
+- name: marker content
+  slurp:
+    src: /etc/openldap/slapd.d/.band-config-sha1
+  register: ldap_config_marker_content
+  when: ldap_config_marker.stat.exists
+  become: yes
+
+- name: decide whether to rebuild cn=config
+  set_fact:
+    ldap_config_rebuild: >-
+      {{ not ldap_config_marker.stat.exists
+         or (ldap_config_marker_content.content | b64decode | trim) != ldap_config.checksum }}
+
+- name: rebuild cn=config
+  when: ldap_config_rebuild | bool
+  become: yes
+  block:
+  - name: the rendering loads (slapadd into a scratch directory)
+    shell: |
+      set -e
+      d=$(mktemp -d)
+      trap 'rm -rf "$d"' EXIT
+      slapadd -n0 -F "$d" -l {{ ldap_config_ldif }}
+      slaptest -u -F "$d"
+    changed_when: false
+
+  - name: stop slapd
+    systemd:
+      name: slapd
+      state: stopped
+
+  - name: keep the previous slapd.d
+    shell: |
+      [ -d /etc/openldap/slapd.d ] || exit 0
+      mv /etc/openldap/slapd.d /etc/openldap/slapd.d.$(date +%Y%m%d-%H%M%S)
+
+  - name: new slapd.d
+    file:
+      path: /etc/openldap/slapd.d
+      state: directory
+      owner: ldap
+      group: ldap
+      mode: '0750'
+
+  - name: load cn=config
+    command: slapadd -n0 -F /etc/openldap/slapd.d -l {{ ldap_config_ldif }}
+
+  - name: remember the rendering
+    copy:
+      dest: /etc/openldap/slapd.d/.band-config-sha1
+      content: "{{ ldap_config.checksum }}\n"
+      mode: '0600'
+
+  - name: slapd.d belongs to ldap, SELinux labels
+    shell: chown -R ldap:ldap /etc/openldap/slapd.d && restorecon -R /etc/openldap/slapd.d
+
+######## database directory and service
+- name: database directory
+  file:
+    path: "{{ ldap_db_dir }}"
+    state: directory
+    owner: ldap
+    group: ldap
+    mode: '0700'
+  become: yes
+
+- name: slapd listens on ldapi, ldap and ldaps
+  lineinfile:
+    path: /etc/sysconfig/slapd
+    regexp: '^SLAPD_URLS='
+    line: 'SLAPD_URLS="ldapi:/// ldap:/// ldaps:///"'
+  notify: restart slapd
+  become: yes
+
+- name: slapd enabled and running
+  systemd:
+    name: slapd
+    enabled: yes
+    state: started
+  become: yes
+
+######## firewall: SSH as before, LDAP only from the cluster's networks
+- name: firewalld enabled and running
+  systemd:
+    name: firewalld
+    enabled: yes
+    state: started
+  become: yes
+
+- name: LDAP from the allowed networks
+  ansible.posix.firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ item.0 }}" service name="{{ item.1 }}" accept'
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ ldap_allowed_networks | product(['ldap', 'ldaps']) | list }}"
+  become: yes
+
+- meta: flush_handlers
+
+######## checks
+- name: slapd answers on ldaps with its certificate
+  command: >-
+    ldapsearch -x -LLL -H ldaps://{{ ldap_hostname }} -s base -b "" namingContexts
+  environment:
+    LDAPTLS_CACERT: "{{ ldap_cert_dir }}/ca.crt"
+  register: ldap_rootdse
+  changed_when: false
+  retries: 5
+  delay: 2
+  until: ldap_rootdse.rc == 0
+
+- name: anonymous clients read nothing of the accounts
+  shell: >-
+    ldapsearch -x -LLL -H ldaps://{{ ldap_hostname }} -b "{{ ldap_suffix }}" "(objectClass=*)" dn userPassword
+    | grep -cE '^(dn|userPassword):' || true
+  environment:
+    LDAPTLS_CACERT: "{{ ldap_cert_dir }}/ca.crt"
+  register: ldap_anon
+  changed_when: false
+  failed_when: ldap_anon.stdout | int != 0

@@ -1,0 +1,6 @@
+---
+- name: restart slapd
+  systemd:
+    name: slapd
+    state: restarted
+  become: yes

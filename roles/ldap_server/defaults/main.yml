@@ -1,0 +1,39 @@
+---
+# OpenLDAP 2.6 on Rocky 9 (openldap-servers from Rocky's "plus" repo): the
+# accounts the Keycloak extension creates, read by sssd/pam_ldap on the
+# cluster and by provision_account.py. Clients use ldaps://<ldap_hostname>.
+
+# the name clients use; the host gets it as its host name too
+ldap_hostname: "{{ site_ldap_host }}"
+# further names (and addresses) the certificate is valid for
+ldap_cert_alt_names: "{{ site_ldap_alt_names | default([]) }}"
+ldap_cert_alt_ips: "{{ [ansible_default_ipv4.address] }}"
+
+ldap_suffix: "dc=eosc-life,dc=eu"
+ldap_rootdn: "cn=admin,{{ ldap_suffix }}"
+# hash ({SSHA}...) of the rootdn's password, from the vault (ldap_root_pw_hash);
+# Keycloak's federation and the extension bind as the rootdn
+ldap_rootpw_hash: "{{ ldap_root_pw_hash }}"
+# sssd, pam_ldap and provision_account.py bind as this one: it reads
+# everything except passwords
+ldap_reader_dn: "cn=nssproxy,ou=users,{{ ldap_suffix }}"
+
+# networks that may reach ports 389/636 (firewalld)
+ldap_allowed_networks: "{{ site_ldap_allowed_networks }}"
+
+# mdb database; OpenLDAP's own default size limit is 10 MB
+ldap_db_dir: /var/lib/ldap
+ldap_db_maxsize: 1073741824
+
+# own CA, kept on this host (root only); its certificate is what clients trust
+ldap_ca_dir: /etc/pki/band-ldap-ca
+ldap_ca_name: "BAND LDAP CA ({{ ldap_hostname }})"
+ldap_cert_dir: /etc/openldap/certs
+ldap_cert_days: 3650
+# the CA certificate, fetched to the Ansible host for the clients and Keycloak
+ldap_ca_fetch_to: "{{ playbook_dir }}/files/ldap-ca-{{ ldap_hostname }}.crt"
+
+# cn=config is rendered from templates/slapd-config.ldif.j2 and rebuilt with
+# slapadd whenever the rendering changes (the data in ldap_db_dir is kept)
+ldap_config_ldif: /etc/openldap/band-slapd-config.ldif
+ldap_schemas: [core, cosine, nis, inetorgperson]

@@ -57,7 +57,7 @@ ldapRfc2307: |
   ldap_group_search_base = ou=groups,dc=eosc-life,dc=eu
 ldap_access_filter: "(objectClass=posixAccount)"
 
-# must match ldapManagerPassword in roles/eosc_ldapserver/vars/main.yml
+# must match ldapManagerPassword in attic/roles/eosc_ldapserver/vars/main.yml (the old LDAP server role)
 ldapManagerPassword: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           64646538666265386635373233376639323962623465343037333463373636333666396438633062

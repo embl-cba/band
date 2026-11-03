@@ -1,0 +1,65 @@
+---
+# Load an LDIF of the accounts (slapcat -n 2 of the old server) into the
+# database. Only on purpose:
+#   ansible-playbook ldapserver.yml -e ldap_import_file=<LDIF on the Ansible host>
+# Refuses a database that already has entries unless -e ldap_import_replace=true
+# (then the current database is moved aside, not deleted).
+- name: entries in the database now
+  shell: slapcat -n 2 2>/dev/null | grep -c '^dn:' || true
+  register: ldap_entries_before
+  changed_when: false
+  become: yes
+
+- name: the database is empty (or replacing was asked for)
+  assert:
+    that: ldap_entries_before.stdout | int == 0 or ldap_import_replace | default(false) | bool
+    fail_msg: "{{ ldap_entries_before.stdout }} entries already there; -e ldap_import_replace=true to replace them"
+    quiet: true
+
+- name: LDIF to the server (root only)
+  copy:
+    src: "{{ ldap_import_file }}"
+    dest: /root/ldap-import.ldif
+    owner: root
+    mode: '0600'
+  become: yes
+
+- name: import
+  become: yes
+  block:
+  - name: stop slapd
+    systemd:
+      name: slapd
+      state: stopped
+
+  - name: keep the current database
+    shell: |
+      [ -n "$(ls -A {{ ldap_db_dir }} 2>/dev/null)" ] || exit 0
+      mv {{ ldap_db_dir }} {{ ldap_db_dir }}.$(date +%Y%m%d-%H%M%S)
+      install -d -o ldap -g ldap -m 0700 {{ ldap_db_dir }}
+
+  - name: slapadd
+    command: slapadd -n 2 -q -l /root/ldap-import.ldif
+
+  - name: database belongs to ldap, SELinux labels
+    shell: chown -R ldap:ldap {{ ldap_db_dir }} && restorecon -R {{ ldap_db_dir }}
+
+  always:
+  - name: start slapd
+    systemd:
+      name: slapd
+      state: started
+
+  - name: remove the LDIF
+    file:
+      path: /root/ldap-import.ldif
+      state: absent
+
+- name: entries after the import
+  shell: slapcat -n 2 2>/dev/null | grep -c '^dn:' || true
+  register: ldap_entries_after
+  changed_when: false
+  become: yes
+
+- debug:
+    msg: "{{ ldap_entries_after.stdout }} entries in {{ ldap_suffix }}"

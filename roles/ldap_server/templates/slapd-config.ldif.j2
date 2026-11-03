@@ -1,0 +1,64 @@
+# {{ ansible_managed }}
+# cn=config for slapd, loaded with slapadd -n0 by the ldap_server role.
+# Changes here rebuild /etc/openldap/slapd.d; the data in {{ ldap_db_dir }} is kept.
+
+dn: cn=config
+objectClass: olcGlobal
+cn: config
+olcArgsFile: /run/openldap/slapd.args
+olcPidFile: /run/openldap/slapd.pid
+olcLogLevel: stats
+olcTLSCACertificateFile: {{ ldap_cert_dir }}/ca.crt
+olcTLSCertificateFile: {{ ldap_cert_dir }}/server.crt
+olcTLSCertificateKeyFile: {{ ldap_cert_dir }}/server.key
+# TLS 1.2 or newer
+olcTLSProtocolMin: 3.3
+
+dn: cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: schema
+
+{% for s in ldap_schemas %}
+include: file:///etc/openldap/schema/{{ s }}.ldif
+
+{% endfor %}
+dn: olcDatabase={-1}frontend,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcFrontendConfig
+olcDatabase: {-1}frontend
+olcSizeLimit: 2000
+# the root DSE and the schema stay readable for every client (TLS, controls)
+olcAccess: {0}to dn.base="" by * read
+olcAccess: {1}to dn.base="cn=Subschema" by * read
+
+# cn=config: only root on this host, through ldapi:/// (no password)
+dn: olcDatabase={0}config,cn=config
+objectClass: olcDatabaseConfig
+olcDatabase: {0}config
+olcAccess: {0}to * by dn.exact="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" manage by * none
+
+dn: olcDatabase={1}monitor,cn=config
+objectClass: olcDatabaseConfig
+olcDatabase: {1}monitor
+olcAccess: {0}to * by dn.exact="gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth" read by dn.exact="{{ ldap_rootdn }}" read by * none
+
+# The accounts. The rootdn ({{ ldap_rootdn }}) is never limited by olcAccess.
+# Passwords: only for logging in, never readable; the rest: readable for the
+# reader ({{ ldap_reader_dn }}) and each user's own entry; nothing for anonymous.
+dn: olcDatabase={2}mdb,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcMdbConfig
+olcDatabase: {2}mdb
+olcDbDirectory: {{ ldap_db_dir }}
+olcDbMaxSize: {{ ldap_db_maxsize }}
+olcSuffix: {{ ldap_suffix }}
+olcRootDN: {{ ldap_rootdn }}
+olcRootPW: {{ ldap_rootpw_hash }}
+olcDbIndex: objectClass eq,pres
+olcDbIndex: ou,cn,mail,sn,givenName eq,pres,sub
+olcDbIndex: uid eq,pres,sub
+olcDbIndex: uidNumber,gidNumber eq
+olcDbIndex: memberUid eq
+olcAccess: {0}to attrs=userPassword by self =xw by anonymous auth by * none
+olcAccess: {1}to attrs=shadowLastChange by self write by dn.exact="{{ ldap_reader_dn }}" read by * none
+olcAccess: {2}to * by dn.exact="{{ ldap_reader_dn }}" read by self read by * none

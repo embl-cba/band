@@ -1,0 +1,100 @@
+---
+# An own CA on this host and a server certificate for ldap_hostname, the
+# alternative names and the host's address. Clients get the CA certificate.
+- name: CA directory (root only)
+  file:
+    path: "{{ ldap_ca_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+
+- name: CA key
+  community.crypto.openssl_privatekey:
+    path: "{{ ldap_ca_dir }}/ca.key"
+    type: RSA
+    size: 4096
+    mode: '0600'
+  become: yes
+
+- name: CA certificate request
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ ldap_ca_dir }}/ca.key"
+    common_name: "{{ ldap_ca_name }}"
+    basic_constraints: ["CA:TRUE"]
+    basic_constraints_critical: true
+    key_usage: [keyCertSign, cRLSign]
+    key_usage_critical: true
+  register: ldap_ca_csr
+  changed_when: false
+  become: yes
+
+- name: CA certificate (self-signed)
+  community.crypto.x509_certificate:
+    path: "{{ ldap_ca_dir }}/ca.crt"
+    csr_content: "{{ ldap_ca_csr.csr }}"
+    privatekey_path: "{{ ldap_ca_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_not_after: "+{{ ldap_cert_days * 2 }}d"
+    mode: '0644'
+  become: yes
+
+- name: server key
+  community.crypto.openssl_privatekey:
+    path: "{{ ldap_cert_dir }}/server.key"
+    type: RSA
+    size: 3072
+    owner: root
+    group: ldap
+    mode: '0640'
+  become: yes
+
+- name: server certificate request
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ ldap_cert_dir }}/server.key"
+    common_name: "{{ ldap_hostname }}"
+    subject_alt_name: "{{ (([ldap_hostname] + ldap_cert_alt_names) | map('regex_replace', '^', 'DNS:') | list)
+                          + (ldap_cert_alt_ips | map('regex_replace', '^', 'IP:') | list) }}"
+    extended_key_usage: [serverAuth]
+    key_usage: [digitalSignature, keyEncipherment]
+  register: ldap_server_csr
+  changed_when: false
+  become: yes
+
+- name: server certificate (signed by the CA)
+  community.crypto.x509_certificate:
+    path: "{{ ldap_cert_dir }}/server.crt"
+    csr_content: "{{ ldap_server_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ ldap_ca_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ ldap_ca_dir }}/ca.key"
+    ownca_not_after: "+{{ ldap_cert_days }}d"
+    owner: root
+    group: ldap
+    mode: '0644'
+  notify: restart slapd
+  become: yes
+
+- name: CA certificate next to the server certificate
+  copy:
+    src: "{{ ldap_ca_dir }}/ca.crt"
+    dest: "{{ ldap_cert_dir }}/ca.crt"
+    remote_src: true
+    owner: root
+    group: ldap
+    mode: '0644'
+  notify: restart slapd
+  become: yes
+
+- name: SELinux labels of the certificates
+  command: restorecon -R {{ ldap_cert_dir }}
+  changed_when: false
+  become: yes
+
+- name: CA certificate to the Ansible host (for clients and Keycloak)
+  fetch:
+    src: "{{ ldap_ca_dir }}/ca.crt"
+    dest: "{{ ldap_ca_fetch_to }}"
+    flat: true
+  become: yes

@@ -13,7 +13,8 @@ cat <<'JSON'
       "node-5":          {"ansible_ssh_host": "{{ site_hosts['node-5'] }}", "ansible_ssh_user": "rocky"},
       "band-portal-old": {"ansible_ssh_host": "{{ site_hosts['band-portal-old'] }}", "ansible_ssh_user": "ubuntu"},
       "band-auth-old":   {"ansible_ssh_host": "{{ site_hosts['band-auth-old'] }}", "ansible_ssh_user": "ubuntu"},
-      "ldap-old":        {"ansible_ssh_host": "{{ site_hosts['ldap-old'] }}", "ansible_ssh_user": "rocky"}
+      "ldap-old":        {"ansible_ssh_host": "{{ site_hosts['ldap-old'] }}", "ansible_ssh_user": "rocky"},
+      "ldap":            {"ansible_ssh_host": "{{ site_hosts['ldap'] }}", "ansible_ssh_user": "rocky"}
     }
   },
   "ManagementNodes":   ["mgmt-0"],
@@ -23,6 +24,7 @@ cat <<'JSON'
   "OldPortalNodes":    ["band-portal-old"],
   "OldAuthNodes":      ["band-auth-old"],
   "OldLdapNodes":      ["ldap-old"],
+  "LdapNodes":         ["ldap"],
   "DesktopNodes":      ["node-1", "node-2", "node-3", "node-4", "node-5"],
   "default_partition": ["node-1", "node-2", "node-3", "node-4", "node-5"],
   "rocky_partition":   ["node-1", "node-2", "node-3", "node-4", "node-5"]

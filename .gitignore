@@ -17,3 +17,5 @@ __pycache__/
 *.war
 *.jar
 
+# the LDAP CA certificate ldapserver.yml fetches (site-specific)
+/files/ldap-ca-*.crt

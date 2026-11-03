@@ -1,7 +1,15 @@
-- hosts: 'ldapserver' 
-  user: rocky
-  become: yes
-  gather_facts: true    
-  roles: 
-     - eosc_ldapserver
+# The LDAP server (OpenLDAP 2.6 on Rocky 9): ansible-playbook ldapserver.yml
+# Loading the accounts is a separate, deliberate step:
+#   ansible-playbook ldapserver.yml -e ldap_import_file=<LDIF from slapcat -n 2>
+- hosts: LdapNodes
+  gather_facts: true
+  vars_files:
+  - vars/passwords.yml
+  tasks:
+  - import_role:
+      name: ldap_server
 
+  - include_role:
+      name: ldap_server
+      tasks_from: import
+    when: ldap_import_file is defined
