@@ -48,11 +48,23 @@ portal_mongodb_data: /var/lib/mongodb-docker
 ### guacamole home
 guacamole_home: /etc/guacamole
 
-### massive plugin (BAND authentication extension), built for guacamole_version
-massive_plugin_version: 1.6.0
-## gson 2.4
-gson_24_url: https://repo1.maven.org/maven2/com/google/code/gson/gson/2.4/gson-2.4.jar
-gson_24_sha256: a35abbcf689eb3d60a2959e83a624831658b023220cd2edb66350993ebfdc025
+### BAND Guacamole extension (turns the portal's cookie into the connection),
+### built for guacamole_version; a release asset of its own repository
+band_guac_ext_version: 1.6.1
+band_guac_ext_jar: "band-guacamole-extension-{{ band_guac_ext_version }}.jar"
+band_guac_ext_url: "https://github.com/embl-cba/band-guacamole-extension/releases/download/v{{ band_guac_ext_version }}/{{ band_guac_ext_jar }}"
+band_guac_ext_sha256: 4bccd2185851183f7bddb846cef50c2a47d49d56631f1c7a157cac94f6b3efd6
+# Guacamole may only SSH/SFTP to these: the desktop nodes' addresses, as the
+# portal's execHost gives them (getent hosts on the login node)
+band_ssh_hosts: "{{ groups['DesktopNodes'] | map('extract', hostvars, 'ansible_ssh_host') | list }}"
+## gson for the extension (not in guacamole.war)
+gson_version: 2.14.0
+gson_url: "https://repo1.maven.org/maven2/com/google/code/gson/gson/{{ gson_version }}/gson-{{ gson_version }}.jar"
+gson_sha256: 2cbd119bf1961c28788310963dc80ba65f58cdeec1dd139c8bdb1240faa2c36f
+# what earlier versions installed
+guacamole_lib_removed:
+  - "{{ guacamole_home }}/lib/gson-2.4.jar"
+  - "{{ guacamole_home }}/extensions/massive-guacamole-remote-1.6.0.jar"
 
 ### tomcat dir
 tomcat_dir: /opt/apache-tomcat
@@ -106,6 +118,5 @@ portal_artifacts_url: "https://github.com/embl-cba/band/releases/download/portal
 portal_artifacts:
   - {name: "client-0.0.1-log4j-2.24.3.war",      sha256: bb985e18a29d221df5c6889a81f73a1ba74df24772698748dc1a9f8e5d30afaf}
   - {name: "guacamole-1.6.0.war",                sha256: b41ceb1e2df010b54db563e0b00edb8d5fe9f073c6168462e4c978df0fc6e716}
-  - {name: "massive-guacamole-remote-1.6.0.jar", sha256: cedde18faea862b84fcf58c1f5d6ae3601becf03b54ac5bf0b55fecde7782553}
   - {name: "resource-server-0.0.4-sha512.jar",   sha256: ae70ee0f6c37f70ff2334cd93fbaf25f534e229961e3b81e1cfda60bd4d4e9f8}
   - {name: "eosc-js.tubi.20261030.tar.gz",       sha256: 6079509cc630b15ff1ae9f2ef0f307b0b739b3474ee58eaf6de839e5eb9ee747}

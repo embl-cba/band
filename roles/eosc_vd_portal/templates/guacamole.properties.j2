@@ -2,3 +2,5 @@
 guacd-host: localhost
 guacd-port: {{guad_port}}
 # the BAND extension registers its auth provider via guac-manifest.json
+# and only lets Guacamole SSH/SFTP to the desktop nodes
+band-ssh-hosts: {{ band_ssh_hosts | join(', ') }}

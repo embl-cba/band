@@ -155,21 +155,32 @@
     - "{{ guacamole_home }}/lib"
   become: yes
 
-- name: gson 2.4 for the extension
+- name: gson for the extension
   get_url:
-    url: "{{ gson_24_url }}"
-    dest: "{{ guacamole_home }}/lib/gson-2.4.jar"
-    checksum: "sha256:{{ gson_24_sha256 }}"
+    url: "{{ gson_url }}"
+    dest: "{{ guacamole_home }}/lib/gson-{{ gson_version }}.jar"
+    checksum: "sha256:{{ gson_sha256 }}"
     mode: '0644'
   become: yes
   notify: restart tomcat
 
+# straight from the extension's GitHub release, like gson from Maven Central
 - name: BAND guacamole extension
-  copy:
-    src: "massive-guacamole-remote-{{ massive_plugin_version }}.jar"
-    dest: "{{ guacamole_home }}/extensions/massive-guacamole-remote-{{ massive_plugin_version }}.jar"
+  get_url:
+    url: "{{ band_guac_ext_url }}"
+    dest: "{{ guacamole_home }}/extensions/{{ band_guac_ext_jar }}"
+    checksum: "sha256:{{ band_guac_ext_sha256 }}"
     owner: root
     mode: '0644'
+  become: yes
+  notify: restart tomcat
+
+# two extensions or two gson versions must not be loaded side by side
+- name: remove what earlier versions installed
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ guacamole_lib_removed }}"
   become: yes
   notify: restart tomcat
 

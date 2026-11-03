@@ -44,6 +44,16 @@ Not in the repository, by design. Placeholders are pushed instead:
   with your own, encrypted with your own vault password (see the
   "Secrets" section of NEW_INSTANCE.md).
 
+Companion repositories, installed by the roles from pinned releases or tags
+(sha256 checked):
+- [band-portal-web](https://github.com/embl-cba/band-portal-web): the
+  portal's web front end (Vue).
+- [band-guacamole-extension](https://github.com/embl-cba/band-guacamole-extension):
+  the Guacamole authentication extension that opens a desktop or terminal
+  from the portal.
+- [band-keycloak-flow-extension](https://github.com/embl-cba/band-keycloak-flow-extension)
+  and [band-keycloak-theme](https://github.com/embl-cba/band-keycloak-theme):
+  the registration step and the login theme of BAND's Keycloak.
 
 The code is partly based on https://github.com/monash-merc/ansible_cluster_in_a_box
 

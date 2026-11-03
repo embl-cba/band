@@ -270,6 +270,16 @@ Not part of the full run:
   `ansible-playbook portal.yml --tags portal_web -e portal_frontend=eosc-js`.
   A new front end version: release it in that repo, then set
   `band_portal_web_version` and `band_portal_web_sha256`.
+  Guacamole gets its connection from the portal through
+  [band-guacamole-extension](https://github.com/embl-cba/band-guacamole-extension):
+  the role downloads the release jar `band_guac_ext_version` (sha256
+  `band_guac_ext_sha256`) into `/etc/guacamole/extensions` and gson into
+  `/etc/guacamole/lib`. `/guacamole/` has no login of its own, so the
+  extension only accepts VNC to the portal's own tunnels and SSH/SFTP to the
+  hosts in `band-ssh-hosts` (`guacamole.properties`), which the role fills
+  with the `DesktopNodes` addresses; a desktop node that is missing there
+  can't be reached from the portal. Refused cookies are logged in Tomcat's
+  journal (`journalctl -u tomcat | grep Refused`).
 - `ldapserver.yml` (the LDAP server itself). Its `ldapserver` group is not in
   `inventory_tubi`; add one before using it.
 - The pre-split all-in-one playbook is kept as `attic/cluster_installation.old.yml`.
