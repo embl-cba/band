@@ -1,6 +1,5 @@
 ---
-# Keycloak (realm "eosc") for the portal, behind the reverse proxy, with
-# PostgreSQL, both in docker. Public URL https://<host of site_keycloak_realm_url>/auth,
+# Keycloak (realm "eosc") for the portal, with PostgreSQL, both in docker. Public URL https://<host of site_keycloak_realm_url>/auth,
 # so the issuer and the redirect URIs registered at Google and LS AAI stay the same.
 keycloak_version: "26.8.1"
 keycloak_postgres_image: "postgres:17.11-bookworm"
@@ -25,6 +24,23 @@ keycloak_http_port: 8080
 keycloak_management_port: 9000
 
 keycloak_dir: /opt/keycloak
+
+# where TLS ends:
+#   proxy: at a separate reverse proxy (tubi; files/reverse-proxy-auth.conf.example),
+#          which reaches Keycloak on keycloak_http_port
+#   local: at nginx on this VM, with a Let's Encrypt certificate (cesnet);
+#          Keycloak's port is then reachable from this host only
+keycloak_tls: proxy
+# local: the docker network's fixed subnet; nginx reaches Keycloak through its
+# gateway, the only address Keycloak takes X-Forwarded-* from
+keycloak_docker_subnet: 172.30.80.0/24
+keycloak_docker_gateway: 172.30.80.1
+# local: the Let's Encrypt certificate (certbot, renewed by its timer through
+# the webroot below); see tasks/tls_local.yml for the first one
+keycloak_letsencrypt_dir: "/etc/letsencrypt/live/{{ keycloak_hostname }}"
+keycloak_acme_webroot: /var/www/letsencrypt
+# local: networks allowed to reach the admin console and admin API; [] = all
+keycloak_admin_allow: []
 keycloak_image: "band-keycloak:{{ keycloak_version }}"
 
 # the LDAP server the realm's federation and the extension use
@@ -42,7 +58,7 @@ keycloak_import_override: false
 # the adapted copy, next to the export (same private directory); deleted after the import
 keycloak_import_local: "{{ keycloak_import_file | dirname }}/.realm-import-adapted.json"
 
-# server and import share these; TLS ends at the reverse proxy
+# server and import share these; TLS ends at the reverse proxy or the local nginx
 keycloak_env:
   KC_DB_URL: "jdbc:postgresql://keycloak-postgres:5432/keycloak"
   KC_DB_USERNAME: keycloak
@@ -50,8 +66,9 @@ keycloak_env:
   KC_HOSTNAME: "https://{{ keycloak_hostname }}{{ keycloak_http_relative_path }}"
   KC_HTTP_ENABLED: "true"
   KC_PROXY_HEADERS: xforwarded
-  # X-Forwarded-* only from the reverse proxy, not from anyone reaching :8080
-  KC_PROXY_TRUSTED_ADDRESSES: "{{ site_reverse_proxy }}"
+  # X-Forwarded-* only from the reverse proxy (or the local nginx), not from
+  # anyone reaching :8080
+  KC_PROXY_TRUSTED_ADDRESSES: "{{ site_reverse_proxy if keycloak_tls == 'proxy' else keycloak_docker_gateway }}"
 
 # docker on these VMs: the subnet's IPv4 DNS servers don't
 # answer, the host resolves through its IPv6 link, which containers can't use;

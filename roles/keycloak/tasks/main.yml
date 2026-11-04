@@ -104,9 +104,12 @@
   become: yes
 
 ######## PostgreSQL
+# local TLS: a fixed subnet, so Keycloak can trust exactly its gateway (nginx)
 - name: docker network
   community.docker.docker_network:
     name: keycloak
+    ipam_config: "{{ [{'subnet': keycloak_docker_subnet, 'gateway': keycloak_docker_gateway}]
+                     if keycloak_tls == 'local' else omit }}"
   become: yes
 
 - name: PostgreSQL data
@@ -152,8 +155,9 @@
     # docker doesn't notice a changed env file
     recreate: "{{ keycloak_image_built is changed or keycloak_envfiles.results[1] is changed }}"
     networks: [{name: keycloak}]
+    # local TLS: only nginx on this host reaches Keycloak
     published_ports:
-      - "{{ keycloak_http_port }}:8080"
+      - "{{ '127.0.0.1:' if keycloak_tls == 'local' else '' }}{{ keycloak_http_port }}:8080"
       - "127.0.0.1:{{ keycloak_management_port }}:9000"
     etc_hosts: "{{ {keycloak_ldap_host: keycloak_ldap_address} }}"
     env_file: "{{ keycloak_dir }}/keycloak.env"
@@ -168,6 +172,10 @@
   until: keycloak_ready.status == 200
   retries: 60
   delay: 5
+
+- name: TLS on this VM (nginx, Let's Encrypt)
+  import_tasks: tls_local.yml
+  when: keycloak_tls == 'local'
 
 # the admin console is reachable through the proxy: lock accounts of the
 # master realm (admin) for a while after repeated wrong passwords

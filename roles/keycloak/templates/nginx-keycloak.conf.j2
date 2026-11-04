@@ -1,0 +1,71 @@
+# {{ ansible_managed }}
+# Keycloak behind nginx on this VM (keycloak_tls: local). Keycloak listens on
+# 127.0.0.1:{{ keycloak_http_port }} only and trusts X-Forwarded-* only from
+# docker's gateway ({{ keycloak_docker_gateway }}), i.e. from this nginx.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ keycloak_hostname }};
+
+    # Let's Encrypt renewals (certbot --webroot)
+    location /.well-known/acme-challenge/ {
+        root {{ keycloak_acme_webroot }};
+    }
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    # nginx 1.24 (Ubuntu 24.04) still takes http2 on the listen line
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {{ keycloak_hostname }};
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_certificate {{ keycloak_letsencrypt_dir }}/fullchain.pem;
+    ssl_certificate_key {{ keycloak_letsencrypt_dir }}/privkey.pem;
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout 10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # Keycloak's tokens and cookies make large response headers
+    proxy_buffer_size 128k;
+    proxy_buffers 4 256k;
+    proxy_busy_buffers_size 256k;
+
+    location = / {
+        return 302 https://$host{{ keycloak_http_relative_path }}/;
+    }
+
+    location {{ keycloak_http_relative_path }} {
+        proxy_pass http://127.0.0.1:{{ keycloak_http_port }}{{ keycloak_http_relative_path }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port 443;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+    }
+{% if keycloak_admin_allow | length > 0 %}
+
+    # admin console and admin API only from these networks
+    location {{ keycloak_http_relative_path }}/admin/ {
+{% for net in keycloak_admin_allow %}
+        allow {{ net }};
+{% endfor %}
+        deny all;
+        proxy_pass http://127.0.0.1:{{ keycloak_http_port }}{{ keycloak_http_relative_path }}/admin/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port 443;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+    }
+{% endif %}
+}

@@ -1,0 +1,105 @@
+---
+# keycloak_tls: local. nginx on this VM ends TLS with a Let's Encrypt
+# certificate and passes /auth to Keycloak on 127.0.0.1.
+#
+# The certificate has to be in {{ keycloak_letsencrypt_dir }} before this runs:
+# - moving from an old Keycloak VM: copy its /etc/letsencrypt (with the
+#   account and renewal settings), then renewals go on here;
+# - new name: point the name at this VM, then
+#     certbot certonly --standalone -d <name>   (nginx stopped)
+# certbot's own timer renews it through the webroot below.
+- name: nginx and certbot
+  apt:
+    name: [nginx, certbot]
+    state: present
+  become: yes
+
+- name: the certificate is there
+  stat:
+    path: "{{ keycloak_letsencrypt_dir }}/fullchain.pem"
+  register: keycloak_le_cert
+  become: yes
+
+- name: no certificate yet
+  fail:
+    msg: >-
+      {{ keycloak_letsencrypt_dir }}/fullchain.pem is missing: copy /etc/letsencrypt
+      from the old VM, or get one with certbot (see roles/keycloak/tasks/tls_local.yml)
+  when: not keycloak_le_cert.stat.exists
+
+- name: ACME webroot
+  file:
+    path: "{{ keycloak_acme_webroot }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+# renewals answer through nginx (port 80 stays up), whatever the certificate
+# was first issued with
+- name: renew through the webroot
+  community.general.ini_file:
+    path: "/etc/letsencrypt/renewal/{{ keycloak_hostname }}.conf"
+    section: renewalparams
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    mode: '0644'
+  loop:
+    - {option: authenticator, value: webroot}
+    - {option: webroot_path, value: "{{ keycloak_acme_webroot }},"}
+  loop_control:
+    label: "{{ item.option }}"
+  when: keycloak_le_cert.stat.exists
+  become: yes
+
+- name: reload nginx after a renewal
+  copy:
+    dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
+    content: |
+      #!/bin/sh
+      systemctl reload nginx
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: nginx site for Keycloak
+  template:
+    src: nginx-keycloak.conf.j2
+    dest: /etc/nginx/sites-available/keycloak
+    owner: root
+    group: root
+    mode: '0644'
+  register: keycloak_nginx_site
+  become: yes
+
+- name: site enabled, default site off
+  file:
+    path: "/etc/nginx/sites-enabled/{{ item.name }}"
+    state: "{{ item.state }}"
+    src: "{{ item.src | default(omit) }}"
+  loop:
+    - {name: keycloak, state: link, src: /etc/nginx/sites-available/keycloak}
+    - {name: default, state: absent}
+  register: keycloak_nginx_links
+  become: yes
+
+- name: nginx configuration is valid
+  command: nginx -t
+  changed_when: false
+  become: yes
+
+- name: nginx running, reloaded on changes
+  systemd:
+    name: nginx
+    enabled: yes
+    state: "{{ 'reloaded' if (keycloak_nginx_site is changed or keycloak_nginx_links is changed) else 'started' }}"
+  become: yes
+
+- name: certbot's renewal timer
+  systemd:
+    name: certbot.timer
+    enabled: yes
+    state: started
+  become: yes
