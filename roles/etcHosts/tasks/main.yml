@@ -5,22 +5,21 @@
 
 # cloud-init resets the hostname to the FQDN from the OpenStack metadata on
 # every boot unless told to keep it
-- name: keep cloud-init from resetting the hostname
-  copy:
-    dest: /etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg
-    content: "preserve_hostname: true\n"
-    owner: root
-    mode: "0644"
+- name: host name and domain name
+  when: etchosts_manage_hostname | bool
   become: yes
+  block:
+  - name: keep cloud-init from resetting the hostname
+    copy:
+      dest: /etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg
+      content: "preserve_hostname: true\n"
+      owner: root
+      mode: "0644"
 
-# short name, persistent (/etc/hostname via hostnamectl)
-- name: set hostname
-  hostname:
-    name: "{{ ansible_hostname }}"
-  become: yes
+  # short name, persistent (/etc/hostname via hostnamectl)
+  - name: set hostname
+    hostname:
+      name: "{{ ansible_hostname }}"
 
-- name: set domainname by sysctl
-  shell: sysctl kernel.domainname="{{ domain }}"
-  become: yes
-
-
+  - name: set domainname by sysctl
+    shell: sysctl kernel.domainname="{{ domain }}"

@@ -1,0 +1,6 @@
+---
+# Set the short host name (kept across reboots: cloud-init is told not to
+# reset it) and the kernel domain name. Off where the hosts keep the names
+# OpenStack gave them (cesnet: node-2.novalocal, no domain name); VNC desktop
+# names, and so the portal, follow the host name.
+etchosts_manage_hostname: true
