@@ -177,34 +177,6 @@
   import_tasks: tls_local.yml
   when: keycloak_tls == 'local'
 
-# the admin console is reachable through the proxy: lock accounts of the
-# master realm (admin) for a while after repeated wrong passwords
-- name: brute-force protection for the master realm
-  # kcadm runs in the container; the password goes in as an environment variable
-  shell: |
-    docker exec -e KCPASS keycloak bash -c '
-      set -e
-      K=/opt/keycloak/bin/kcadm.sh; C=/tmp/kcadm.config
-      $K config credentials --config $C --server http://localhost:8080{{ keycloak_http_relative_path }} \
-         --realm master --user admin --password "$KCPASS" >/dev/null
-      cur=$($K get realms/master --config $C --fields bruteForceProtected)
-      if [[ $cur == *"\"bruteForceProtected\" : true"* ]]; then
-        echo unchanged
-      else
-        $K update realms/master --config $C -s bruteForceProtected=true \
-           -s failureFactor=5 -s waitIncrementSeconds=60 -s maxFailureWaitSeconds=900 -s maxDeltaTimeSeconds=43200
-        echo changed
-      fi
-      rm -f $C'
-  args:
-    executable: /bin/bash
-  environment:
-    KCPASS: "{{ keycloak_admin_password }}"
-  register: keycloak_bruteforce
-  changed_when: keycloak_bruteforce.stdout_lines[-1] | default('') == 'changed'
-  no_log: true
-  become: yes
-
 ######## nightly database backup (local, and a copy on the NFS share)
 - name: NFS client for the backup copy
   apt:
