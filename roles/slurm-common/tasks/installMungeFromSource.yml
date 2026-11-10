@@ -1,28 +1,38 @@
+# Built only where {{ munge_dir }} has no munged yet: an installed munge is
+# never downloaded, rebuilt or reinstalled over (also not in --check).
 # 0.5.15+ is needed for OpenSSL 3 (Rocky 9); the release tarball ships a ready configure script
-- name: get munge
-  get_url:
-    url: https://github.com/dun/munge/releases/download/munge-{{ munge_version }}/munge-{{ munge_version }}.tar.xz
-    dest: /tmp/munge-{{ munge_version }}.tar.xz
+- name: installed munge
+  stat:
+    path: "{{ munge_dir }}/sbin/munged"
+  register: munge_installed
 
-- name: untar munge
-  unarchive:
-    src: /tmp/munge-{{ munge_version }}.tar.xz
-    dest: /tmp
-    remote_src: yes
-    creates: /tmp/munge-{{ munge_version }}/configure
+- name: build and install munge {{ munge_version }}
+  when: not munge_installed.stat.exists
+  block:
+  - name: get munge
+    get_url:
+      url: https://github.com/dun/munge/releases/download/munge-{{ munge_version }}/munge-{{ munge_version }}.tar.xz
+      dest: /tmp/munge-{{ munge_version }}.tar.xz
 
-- name: build munge
-  shell: ./configure --prefix={{ munge_dir }} --with-crypto-lib=openssl && make
-  args:
-    chdir: /tmp/munge-{{ munge_version }}
-    creates: /tmp/munge-{{ munge_version }}/src/munged/munged
+  - name: untar munge
+    unarchive:
+      src: /tmp/munge-{{ munge_version }}.tar.xz
+      dest: /tmp
+      remote_src: yes
+      creates: /tmp/munge-{{ munge_version }}/configure
 
-- name: install munge
-  shell: make install
-  become: yes
-  args:
-    chdir: /tmp/munge-{{ munge_version }}
-    creates: "{{ munge_dir }}/sbin/munged"
+  - name: build munge
+    shell: ./configure --prefix={{ munge_dir }} --with-crypto-lib=openssl && make
+    args:
+      chdir: /tmp/munge-{{ munge_version }}
+      creates: /tmp/munge-{{ munge_version }}/src/munged/munged
+
+  - name: install munge
+    shell: make install
+    become: yes
+    args:
+      chdir: /tmp/munge-{{ munge_version }}
+      creates: "{{ munge_dir }}/sbin/munged"
 
 - name: set use_systemd
   set_fact:

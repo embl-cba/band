@@ -1,58 +1,52 @@
-- name: remove all install
-  shell: rm -rf /tmp/slurm-{{ slurm_version }}
-  become: yes 
-  when: force_slurm_recompile is defined
+# Built only where {{ slurm_dir }} has no slurmd yet, or with
+# -e force_slurm_recompile=true. An installed Slurm is never deleted, rebuilt
+# or reinstalled over by a normal run (this used to delete bin/srun and run
+# make install on every run, on live nodes too).
+- name: installed Slurm
+  stat:
+    path: "{{ slurm_dir }}/sbin/slurmd"
+  register: slurm_installed
 
-- name: remove all install
-  shell: rm -rf {{ slurm_dir }}
-  become: yes 
-  when: force_slurm_recompile is defined
+- name: build and install Slurm {{ slurm_version }}
+  when: not slurm_installed.stat.exists or (force_slurm_recompile | default(false) | bool)
+  block:
+  - name: remove the old build and install (force_slurm_recompile)
+    file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - /tmp/slurm-{{ slurm_version }}
+      - "{{ slurm_dir }}"
+    become: yes
+    when: force_slurm_recompile | default(false) | bool
 
-- name: get slurm
-  #shell: wget --no-check-certificate https://cvl.massive.org.au/slurm-{{ slurm_version }}.tar.bz2
-  shell: wget https://download.schedmd.com/slurm/slurm-{{ slurm_version }}.tar.bz2
-  args:
-    chdir: /tmp
-    creates: /tmp/slurm-{{ slurm_version }}.tar.bz2
+  - name: get slurm
+    get_url:
+      url: https://download.schedmd.com/slurm/slurm-{{ slurm_version }}.tar.bz2
+      dest: /tmp/slurm-{{ slurm_version }}.tar.bz2
 
-- name: untar slurm
-  shell: tar jxf /tmp/slurm-{{ slurm_version }}.tar.bz2
-  args:
-    chdir: /tmp
-    creates: /tmp/slurm-{{ slurm_version }}
+  - name: untar slurm
+    unarchive:
+      src: /tmp/slurm-{{ slurm_version }}.tar.bz2
+      dest: /tmp
+      remote_src: yes
+      creates: /tmp/slurm-{{ slurm_version }}/configure
 
-- name: delete srun
-  command: rm -f /tmp/slurm-{{ slurm_version }}/src/srun/srun
-  become: yes
+  # mariadb-devel is in CRB on Rocky 9; dbus-devel + kernel-headers are needed
+  # for the cgroup/v2 plugin, otherwise it is silently not built
+  - name: install slurm build deps
+    dnf: name=mariadb-devel,dbus-devel,kernel-headers enablerepo=crb state=present
+    become: yes
 
-- name: delete srun
-  command: rm -f /opt/slurm-{{ slurm_version }}/src/srun/srun
-  become: yes
+  - name: build slurm
+    shell: ./configure --prefix={{ slurm_dir }} --with-munge={{ munge_dir }} && make
+    args:
+      chdir: /tmp/slurm-{{ slurm_version }}
+      creates: /tmp/slurm-{{ slurm_version }}/src/srun/srun
 
-- name: delete srun
-  command: rm -f /opt/slurm-{{ slurm_version }}/bin/srun
-  become: yes
-
-    
-# mariadb-devel is in CRB on Rocky 9; dbus-devel + kernel-headers are needed
-# for the cgroup/v2 plugin, otherwise it is silently not built
-- name: install slurm build deps
-  dnf: name=mariadb-devel,dbus-devel,kernel-headers enablerepo=crb state=present
-  become: yes
-
-- name: build slurm
-  shell: ./configure --prefix={{ slurm_dir }} --with-munge={{ munge_dir }}  && make
-  args:
-    chdir: /tmp/slurm-{{ slurm_version }}
-    creates: /tmp/slurm-{{ slurm_version }}/src/srun/srun
-
-- name: install slurm
-  shell: make install
-  become: yes
-  args:
-    chdir: /tmp/slurm-{{ slurm_version }}
-    creates: "{{ slurm_dir }}/bin/srun"
-
-    #- name: add slurm log rotate config
-    #  template: src=slurmlog.j2 dest=/etc/logrotate.d/slurm mode=644
-    #  become: yes
+  - name: install slurm
+    shell: make install
+    become: yes
+    args:
+      chdir: /tmp/slurm-{{ slurm_version }}
+      creates: "{{ slurm_dir }}/bin/srun"

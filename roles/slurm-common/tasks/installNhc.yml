@@ -1,27 +1,37 @@
-- name: Download nhc source
-  shell: wget https://github.com/mej/nhc/releases/download/{{nhc_version}}/lbnl-nhc-{{nhc_version}}.tar.xz
-  args:
-    chdir: /tmp
-    creates: /tmp/lbnl-nhc-{{nhc_version}}.tar.xz
+# Built only where {{ nhc_dir }} has no nhc yet: an installed NHC is never
+# downloaded, rebuilt or reinstalled over (also not in --check).
+- name: installed NHC
+  stat:
+    path: "{{ nhc_dir }}/sbin/nhc"
+  register: nhc_installed
 
-- name: untar nhc
-  shell: tar -xf /tmp/lbnl-nhc-{{nhc_version}}.tar.xz
-  args:
-    chdir: /tmp
+- name: build and install NHC {{ nhc_version }}
+  when: not nhc_installed.stat.exists
+  block:
+  - name: get nhc
+    get_url:
+      url: https://github.com/mej/nhc/releases/download/{{ nhc_version }}/lbnl-nhc-{{ nhc_version }}.tar.xz
+      dest: /tmp/lbnl-nhc-{{ nhc_version }}.tar.xz
 
-- name: build nhc
-  shell: ./configure --prefix={{ nhc_dir }} && make
-  args:
-    # chdir: /tmp/warewulf-nhc-{{ nhc_version }}
-    chdir: /tmp/lbnl-nhc-{{ nhc_version }}
+  - name: untar nhc
+    unarchive:
+      src: /tmp/lbnl-nhc-{{ nhc_version }}.tar.xz
+      dest: /tmp
+      remote_src: yes
+      creates: /tmp/lbnl-nhc-{{ nhc_version }}/configure
 
+  - name: build nhc
+    shell: ./configure --prefix={{ nhc_dir }} && make
+    args:
+      chdir: /tmp/lbnl-nhc-{{ nhc_version }}
+      creates: /tmp/lbnl-nhc-{{ nhc_version }}/nhc
 
-- name: install nhc
-  shell: make install
-  become: yes
-  args:
-    # chdir: /tmp/warewulf-nhc-{{ nhc_version }}
-    chdir: /tmp/lbnl-nhc-{{ nhc_version }}
+  - name: install nhc
+    shell: make install
+    become: yes
+    args:
+      chdir: /tmp/lbnl-nhc-{{ nhc_version }}
+      creates: "{{ nhc_dir }}/sbin/nhc"
 
 - name: ensure sysconfig dir exists
   file: dest=/etc/sysconfig state=directory owner=root group=root mode=755
