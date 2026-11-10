@@ -14,13 +14,15 @@ cat <<'JSON'
       "band-portal-old": {"ansible_ssh_host": "{{ site_hosts['band-portal-old'] }}", "ansible_ssh_user": "ubuntu"},
       "band-auth-old":   {"ansible_ssh_host": "{{ site_hosts['band-auth-old'] }}", "ansible_ssh_user": "ubuntu"},
       "ldap-old":        {"ansible_ssh_host": "{{ site_hosts['ldap-old'] }}", "ansible_ssh_user": "rocky"},
-      "ldap":            {"ansible_ssh_host": "{{ site_hosts['ldap'] }}", "ansible_ssh_user": "rocky"}
+      "ldap":            {"ansible_ssh_host": "{{ site_hosts['ldap'] }}", "ansible_ssh_user": "rocky"},
+      "band-auth":       {"ansible_ssh_host": "{{ site_hosts['band-auth'] }}", "ansible_ssh_user": "ubuntu"},
+      "band-portal":     {"ansible_ssh_host": "{{ site_hosts['band-portal'] }}", "ansible_ssh_user": "ubuntu"}
     }
   },
   "ManagementNodes":   ["mgmt-0"],
   "LoginNodes":        ["login-0"],
-  "PortalNodes":       [],
-  "AuthNodes":         [],
+  "PortalNodes":       ["band-portal"],
+  "AuthNodes":         ["band-auth"],
   "OldPortalNodes":    ["band-portal-old"],
   "OldAuthNodes":      ["band-auth-old"],
   "OldLdapNodes":      ["ldap-old"],
