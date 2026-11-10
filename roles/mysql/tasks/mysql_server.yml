@@ -24,7 +24,8 @@
     mode: 0644
   become: yes
   register: innodb_cnf
-  when: ansible_distribution == "Rocky"
+  # changing them restarts MariaDB (slurmdbd loses its connection briefly)
+  when: ansible_distribution == "Rocky" and (mysql_innodb_settings | default(true) | bool)
 
 - name: "Starting MySQL"
   service: name={{ sqlServiceName }} state=started enabled=true

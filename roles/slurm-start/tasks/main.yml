@@ -75,8 +75,9 @@
   become: yes
   when: start_slurmctld is defined
 
+# job mail (sbatch --mail-type) needs MailProg in slurm.conf too
 - include_tasks: mail.yml
-  when: start_slurmctld is defined and provision_smtp_host is defined
+  when: start_slurmctld is defined and provision_smtp_host is defined and (slurm_job_mail | default(true) | bool)
 
 - name: start slurmctl
   service: name=slurmctld state=started enabled=yes

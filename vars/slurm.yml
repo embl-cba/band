@@ -4,7 +4,7 @@ desktopNodeList:
 clustername: "mbp"
 projectname: "band"
 slurm_version: 25.11.4
-munge_version: 0.5.18
+munge_version: 0.5.13   # cesnet: what the cluster runs (built with OpenSSL 3)
 nhc_version: 1.4.2
 munge_dir: /opt/munge-{{ munge_version }}
 slurm_dir: /opt/slurm-{{ slurm_version }}
@@ -45,3 +45,16 @@ slurmfastschedule: "1"
 slurmschedulertype: "sched/backfill"
 restartServerList:
   - slurm
+
+# cesnet: two GPUs on every node (node-1 RTX 2080, node-2..5 Tesla T4); gres.conf
+slurm_gres_list:
+  - {name: "gpu", file: "/dev/nvidia0"}
+  - {name: "gpu", file: "/dev/nvidia1"}
+
+# cesnet: slurmdbd.conf has StorageHost=mgmt-0, so MariaDB knows the user only
+# as slurmdb@mgmt-0.vm.fedcloud.eu (no @localhost, no @<fqdn>)
+slurmdb_mysql_user_host: mgmt-0.vm.fedcloud.eu
+slurmdb_mysql_user_hosts_group: []
+# cesnet: MariaDB runs with its defaults, no job mail (no MailProg in slurm.conf)
+mysql_innodb_settings: false
+slurm_job_mail: false

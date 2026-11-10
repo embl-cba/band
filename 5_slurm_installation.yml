@@ -20,7 +20,7 @@
 - hosts: 'ManagementNodes'
   gather_facts: true
   roles:
-  - { role: mysql, mysql_type: mysql_server,  mysql_root_password: "{{ sqlrootPasswd }}", mysql_user_name: slurmdb, mysql_user_host: localhost, mysql_user_db_name: slurm_acct_db, mysql_user_hosts_group: "{{ groups['ManagementNodes'] }}", mysql_user_password: "{{ slurmdb_passwd }}" }
+  - { role: mysql, mysql_type: mysql_server,  mysql_root_password: "{{ sqlrootPasswd }}", mysql_user_name: slurmdb, mysql_user_host: "{{ slurmdb_mysql_user_host | default('localhost') }}", mysql_user_db_name: slurm_acct_db, mysql_user_hosts_group: "{{ slurmdb_mysql_user_hosts_group | default(groups['ManagementNodes']) }}", mysql_user_password: "{{ slurmdb_passwd }}" }
 
 - hosts: 'ManagementNodes'
   roles:
