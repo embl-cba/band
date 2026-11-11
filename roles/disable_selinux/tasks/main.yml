@@ -10,6 +10,5 @@
 
 - name: Set SELinux to permissive mode immediately (avoids issues before reboot)
   command: setenforce 0
-  ignore_errors: yes
-  when: ansible_distribution == "Rocky"
+  when: ansible_distribution == "Rocky" and ansible_selinux.status == 'enabled' and ansible_selinux.mode == 'enforcing'
 

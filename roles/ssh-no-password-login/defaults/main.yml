@@ -1,0 +1,4 @@
+---
+# X11 forwarding only where people work in a shell (ssh -X to the login node);
+# the portal's desktops don't need it
+sshd_x11_forwarding: "{{ inventory_hostname in groups.get('LoginNodes', []) }}"

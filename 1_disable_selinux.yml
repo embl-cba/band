@@ -1,6 +1,8 @@
 ---
+# The desktop nodes (VNC, VirtualGL, apptainer, s3fs) and the LDAP server run
+# without SELinux; the management and login nodes keep it enforcing.
 - name: Disable SELinux
-  hosts: 'ManagementNodes:LoginNodes:DesktopNodes:LdapNodes'
+  hosts: 'DesktopNodes:LdapNodes'
   become: yes
   gather_facts: yes
   roles:

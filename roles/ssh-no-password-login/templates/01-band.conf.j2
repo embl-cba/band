@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+# sshd uses the first value it reads; this file comes before 50-redhat.conf
+# and 50-cloud-init.conf. Algorithms come from the crypto policy.
+PermitRootLogin no
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+X11Forwarding {{ 'yes' if sshd_x11_forwarding | bool else 'no' }}
+# the portal tunnels the VNC desktops through ssh
+AllowTcpForwarding yes

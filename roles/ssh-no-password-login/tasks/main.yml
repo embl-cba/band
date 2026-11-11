@@ -1,36 +1,25 @@
-- name: "Enable Challenge Response"
-  lineinfile:
-  args:
-    dest: /etc/ssh/sshd_config
-    regexp: "ChallengeResponseAuthentication yes"
-    line: "ChallengeResponseAuthentication no" 
-    backrefs: yes
+---
+# key login only, no root login; a drop-in instead of editing sshd_config
+- name: sshd settings
+  template:
+    src: 01-band.conf.j2
+    dest: /etc/ssh/sshd_config.d/01-band.conf
+    owner: root
+    group: root
+    mode: '0600'
+  register: sshd_dropin
   become: yes
-  notify: 
-  - restart sshd
-  - restart ssh
 
-- name: "Enable Challenge Response"
-  lineinfile:
-  args:
-    dest: /etc/ssh/sshd_config
-    regexp: "PasswordAuthentication no"
-    line: "PasswordAuthentication yes"
-    backrefs: yes
+- name: check the sshd configuration
+  command: sshd -t
+  changed_when: false
+  check_mode: false
   become: yes
-  notify: 
-  - restart sshd
-  - restart ssh
 
-- name: "Disable Challenge Response"
-  lineinfile:
-  args:
-    dest: /etc/ssh/sshd_config
-    regexp: "PasswordAuthentication yes"
-    line: "PasswordAuthentication no"
-    backrefs: yes
+# reload, not restart: open sessions (and the portal's tunnels) stay
+- name: reload sshd
+  service:
+    name: "{{ 'ssh' if ansible_distribution == 'Ubuntu' else 'sshd' }}"
+    state: reloaded
+  when: sshd_dropin is changed or (crypto_policy_set is defined and crypto_policy_set is changed)
   become: yes
-  notify: 
-  - restart sshd
-  - restart ssh
-

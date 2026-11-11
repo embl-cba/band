@@ -1,0 +1,4 @@
+---
+# system-wide crypto policy (Rocky): DEFAULT has no SHA-1 signatures and
+# RSA >= 2048. LEGACY only for old clients (e.g. ssh-rsa/SHA-1).
+crypto_policy: DEFAULT

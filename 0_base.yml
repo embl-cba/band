@@ -1,5 +1,6 @@
 # Step 0, base settings on the cluster nodes: /etc/hosts, root password, time
-# sync, sshd password-login settings. Logging stays as Rocky 9 ships it
+# sync, crypto policy (crypto_policy, default DEFAULT), sshd: keys only, no
+# root login. Logging stays as Rocky 9 ships it
 # (the old log_config role would break logrotate).
 
 - hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
@@ -30,4 +31,5 @@
 - hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
   roles:
   - { role: ntp }
+  - { role: crypto_policy }
   - { role: ssh-no-password-login }

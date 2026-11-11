@@ -1,3 +1,14 @@
-- name: "ntp time sync"
-  shell: timedatectl set-ntp on
+---
+# Rocky ships chrony with the Rocky NTP pool, which is fine
+- name: chrony
+  dnf:
+    name: chrony
+    state: present
+  become: yes
+
+- name: chronyd running
+  service:
+    name: chronyd
+    state: started
+    enabled: yes
   become: yes
