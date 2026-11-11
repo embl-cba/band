@@ -1,7 +1,7 @@
-# Step 4, NFS only: autofs mounts /mnt/vd_shares at /nfs, plus /scratch and
-# /vd-containers, then /home and /usr/local/sbin become links into /nfs.
-# The rocky user's home moves to /local_home first so ansible keeps working
-# whatever happens to /home.
+# Step 4, NFS only: autofs mounts the share(s) in roles/automount/vars/nfs.yml
+# (cesnet: /srv/nfs at /nfs), then /home, /usr/local/sbin and /scratch become
+# links into /nfs. The rocky user's home moves to /local_home first so ansible
+# keeps working whatever happens to /home.
 
 - hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
   gather_facts: true
@@ -12,24 +12,25 @@
 # don't move /home aside unless the share is really there
 - hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
   tasks:
+  - include_vars: roles/automount/vars/nfs.yml
+
   # listing the dir triggers autofs; findmnt then fails unless NFS is really mounted
   - name: check the shares are mounted
     shell: ls {{ item }}/ >/dev/null && findmnt -t nfs4 {{ item }}
     changed_when: false
-    with_items:
-    - /nfs
-    - /scratch
-    - /vd-containers
+    check_mode: false
+    loop: "{{ nfs_mounts | map(attribute='path') | list }}"
 
-  - name: check the share has home and local/sbin
+  - name: check the share has the link targets
     stat: path={{ item }}
     register: nfs_dirs
     failed_when: not nfs_dirs.stat.exists or not nfs_dirs.stat.isdir
-    with_items:
-    - /nfs/home
-    - /nfs/local/sbin
+    loop: "{{ nfs_links | map(attribute='source') | list }}"
 
-- hosts: 'ManagementNodes:LoginNodes:DesktopNodes'
-  roles:
-  - { role: link_usr_local, source: /nfs/local/sbin, dest: /usr/local/sbin }
-  - { role: link_usr_local, source: /nfs/home, dest: /home }
+  - name: links into the share
+    include_role:
+      name: link_usr_local
+    vars:
+      source: "{{ item.source }}"
+      dest: "{{ item.dest }}"
+    loop: "{{ nfs_links }}"

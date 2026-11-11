@@ -1,10 +1,16 @@
 ---
-# the server exports only to an IPv6 range, so mount over IPv6 (IPv4 mounts of
-# the same machine are refused); its IPv6 address is "nfs-server" in files/etcHosts
-nfs_server: "nfs-server"
-nfs_options: "-rw,nfsvers=4,proto=tcp6,hard,nosuid,nodev,timeo=15,retrans=5"
-# mount point -> export; /nfs/scratch on the share is a link to /scratch
+# cesnet: one autofs mount of the server's /srv/nfs over IPv4; home, scratch
+# and containers below it are separate exports that the client mounts by
+# itself (NFSv4 crossing). tubi mounted [nfs-server]:/mnt/vd_shares,
+# /scratch and /vd-containers over IPv6 (proto=tcp6).
+nfs_server: "{{ site_nfs_address }}"
+nfs_options: "-rw,nfsvers=4,hard,intr,nosuid,nodev,timeo=15,retrans=5,nolock"
+# mount point -> export
 nfs_mounts:
-  - { path: /nfs, export: /mnt/vd_shares }
-  - { path: /scratch, export: /scratch }
-  - { path: /vd-containers, export: /vd-containers }
+  - { path: /nfs, export: /srv/nfs }
+# links into the share (4_nfs_installation.yml); a real directory at dest is
+# moved to <dest>_old first, an existing link is left alone
+nfs_links:
+  - { source: /nfs/local/sbin, dest: /usr/local/sbin }
+  - { source: /nfs/home, dest: /home }
+  - { source: /nfs/scratch, dest: /scratch }
