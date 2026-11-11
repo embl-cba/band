@@ -4,6 +4,7 @@
   command: modinfo -F version nvidia
   register: nvidia_current
   changed_when: false
+  check_mode: false
   failed_when: false
 
 - name: Decide whether the driver needs installing
@@ -44,6 +45,22 @@
     mode: '0644'
   register: nouveau_dracut
 
+# dracut deletes the image when /boot fills up while writing it
+- name: Check /boot has room for a new initramfs
+  shell: df --output=avail -BM /boot | tail -1 | tr -dc 0-9
+  register: boot_free
+  changed_when: false
+  check_mode: false
+  when: nouveau_blacklist.changed or nouveau_dracut.changed
+
+- name: Stop when /boot is too full for dracut
+  assert:
+    that: boot_free.stdout | int >= nvidia_boot_min_free_mb | int
+    fail_msg: "/boot has {{ boot_free.stdout }} MB free, dracut needs {{ nvidia_boot_min_free_mb }}:
+               remove old kernels (dnf remove --oldinstallonly) first"
+    quiet: true
+  when: nouveau_blacklist.changed or nouveau_dracut.changed
+
 - name: Rebuild initramfs without nouveau
   command: dracut -f --regenerate-all
   when: nouveau_blacklist.changed or nouveau_dracut.changed
@@ -57,12 +74,14 @@
     done
     exit $rc
   changed_when: false
+  check_mode: false
 
 # run after the kernel upgrade so the new kernel's boot entry gets the args too
 - name: Check nouveau is blacklisted on the kernel command line
   shell: grubby --info=ALL | grep '^args=' | grep -vc 'rd.driver.blacklist=nouveau'
   register: nouveau_cmdline
   changed_when: false
+  check_mode: false
   failed_when: false
 
 - name: Blacklist nouveau on the kernel command line
@@ -73,14 +92,24 @@
   shell: rpm -q --last kernel | head -1 | cut -d' ' -f1 | sed 's/^kernel-//'
   register: newest_kernel
   changed_when: false
+  check_mode: false
 
 - name: Check whether nouveau is loaded
   shell: lsmod | grep -q '^nouveau'
   register: nouveau_loaded
   changed_when: false
+  check_mode: false
   failed_when: false
 
 # boot into the new kernel and without nouveau before anything touches the GPU
+- name: Stop when a reboot is needed but not allowed
+  fail:
+    msg: "{{ inventory_hostname }} needs a reboot (newest kernel {{ newest_kernel.stdout }},
+          running {{ ansible_kernel }}, nouveau loaded: {{ nouveau_loaded.rc == 0 }});
+          nvidia_allow_reboot is false: drain it, reboot it, run this again"
+  when: (newest_kernel.stdout != ansible_kernel or nouveau_loaded.rc == 0)
+        and not (nvidia_allow_reboot | bool)
+
 - name: reboot the machine
   reboot:
     msg: "Rebooting the system..."
@@ -94,6 +123,7 @@
   shell: lsmod | grep -q '^nouveau'
   register: nouveau_after_reboot
   changed_when: false
+  check_mode: false
   failed_when: nouveau_after_reboot.rc == 0
 
 - name: Install the NVIDIA driver
@@ -103,6 +133,7 @@
     command: uname -r
     register: running_kernel
     changed_when: false
+    check_mode: false
 
   - name: Install kernel headers and build dependencies
     dnf:
@@ -149,6 +180,7 @@
   command: nvidia-smi -L
   register: nvidia_smi
   changed_when: false
+  check_mode: false
   async: 60
   poll: 5
 
