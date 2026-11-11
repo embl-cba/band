@@ -1,34 +1,36 @@
-- name: Copy all icons
+---
+# icons of the launchers that come as files (the rest are theme icons)
+- name: Copy the launcher icons
   become: yes
   copy:
-    src: "{{ item.icon }}"
-    dest: "/usr/share/pixmaps/{{ item.icon }}"
+    src: "{{ item }}"
+    dest: "/usr/share/pixmaps/{{ item }}"
     mode: '0644'
-  loop: "{{ gnome_apps }}"
+  loop: "{{ desktop_launchers | map(attribute='icon') | select('search', '\\.') | unique | list + ['rfi-logo.png'] }}"
 
-# helper script the napari launcher calls (rclone and rclone-gui: role rclone)
 - name: Launcher scripts
   become: yes
-  copy:
-    src: run_napari_vgl.sh
-    dest: /usr/local/bin/run_napari_vgl.sh
+  template:
+    src: "{{ item }}.j2"
+    dest: "/usr/local/bin/{{ item }}"
     owner: root
     group: root
     mode: '0755'
+  loop: "{{ desktop_scripts }}"
 
-- name: Deploy .desktop files from templates
+- name: Launchers
   become: yes
   template:
-    src: "{{ item.desktop_base }}.desktop.j2"
-    dest: "/usr/share/applications/{{ item.desktop_base }}.desktop"
+    src: launcher.desktop.j2
+    dest: "/usr/share/applications/{{ item.file }}.desktop"
     mode: '0644'
-  loop: "{{ gnome_desktop_files }}"
+  loop: "{{ desktop_launchers }}"
   loop_control:
-    label: "{{ item.desktop_base }}"
+    label: "{{ item.file }}"
 
-- name: Remove replaced .desktop files
+- name: Remove launchers no longer offered
   become: yes
   file:
     path: "/usr/share/applications/{{ item }}.desktop"
     state: absent
-  loop: "{{ gnome_desktop_files_removed | default([]) }}"
+  loop: "{{ desktop_launchers_removed }}"

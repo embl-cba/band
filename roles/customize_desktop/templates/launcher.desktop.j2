@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name={{ item.name }}
+Icon={{ ('/usr/share/pixmaps/' ~ item.icon) if '.' in item.icon else item.icon }}
+Exec={{ item.exec }}
+Terminal=false
+Categories={{ item.category }};

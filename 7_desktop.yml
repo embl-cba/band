@@ -34,7 +34,7 @@
   - { role: s3fs }
   - { role: embl-s3 }
 
-# apps: apptainer (runs the containers in /vd-containers), java and standard
+# apps: apptainer (runs the containers in /nfs/containers), java and standard
 # tools, rclone and nextflow (binaries on the share in /nfs/local/bin,
 # installed if missing, linked into /usr/local/bin), the GNOME desktop
 # settings (dconf: screensaver, logout, background), the application menu

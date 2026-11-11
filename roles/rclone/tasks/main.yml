@@ -8,9 +8,18 @@
   check_mode: false
   run_once: true
 
+# --check can't download into a temporary directory; just report it
+- name: rclone {{ rclone_version }} would be installed on the share
+  debug:
+    msg: "{{ rclone_bin }}: {{ rclone_installed.stdout_lines[0] | default('missing') }}"
+  changed_when: true
+  when: ansible_check_mode and (rclone_installed.rc != 0 or
+        rclone_installed.stdout_lines[0] | default('') != 'rclone v' + rclone_version)
+  run_once: true
+
 - name: install rclone {{ rclone_version }} on the share
-  when: rclone_installed.rc != 0 or
-        rclone_installed.stdout_lines[0] | default('') != 'rclone v' + rclone_version
+  when: not ansible_check_mode and (rclone_installed.rc != 0 or
+        rclone_installed.stdout_lines[0] | default('') != 'rclone v' + rclone_version)
   run_once: true
   become: yes
   block:

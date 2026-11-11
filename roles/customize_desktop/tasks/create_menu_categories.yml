@@ -23,6 +23,13 @@
     dest: /usr/share/desktop-directories/image-analysis.directory
     mode: '0644'
 
+- name: Copy 'RFI-vEM' directory file
+  become: yes
+  copy:
+    src: rfi-vem.directory
+    dest: /usr/share/desktop-directories/rfi-vem.directory
+    mode: '0644'
+
 - name: Copy custom menu layout file
   become: yes
   copy:

@@ -11,7 +11,15 @@
   run_once: true
   become: yes
 
+# in --check the directory above isn't created, and get_url fails without it
+- name: "{{ nextflow_bin | dirname }} exists"
+  stat:
+    path: "{{ nextflow_bin | dirname }}"
+  register: nextflow_dir
+  run_once: true
+
 - name: nextflow {{ nextflow_version }}
+  when: not ansible_check_mode or nextflow_dir.stat.exists
   get_url:
     url: "https://github.com/nextflow-io/nextflow/releases/download/v{{ nextflow_version }}/nextflow-{{ nextflow_version }}-dist"
     dest: "{{ nextflow_bin }}"

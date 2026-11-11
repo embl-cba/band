@@ -1,67 +1,78 @@
-wallpaper_image: "embl-ic.jpg"
-# icons (files/) copied to /usr/share/pixmaps
-gnome_apps:
-  - icon: aspera.png
-  - icon: cellpose.png
-  - icon: cellprofiler.png
-  - icon: chimerax.png
-  - icon: cp425.png
-  - icon: dlc.png
-  - icon: doublecmd.png
-  - icon: fiji.png
-  - icon: ilastik.png
-  - icon: jipipe.svg
-  - icon: jupyter.png
-  - icon: knime.png
-  - icon: libre.png
-  - icon: matlab.png
-  - icon: mib3.png
-  - icon: napari.png
-  - icon: nn.png
-  - icon: omero.png
-  - icon: owncloud.png
-  - icon: panoply.png
-  - icon: plantseg.png
-  - icon: qupath.png
-  - icon: rclone.png
-  - icon: rstudio.png
-  - icon: tissuumaps.png
-  - icon: volseg.png
-  - icon: xnd.png
+wallpaper_image: "eubi-bg.png"
 
-# templates/<name>.desktop.j2 installed to /usr/share/applications
-gnome_desktop_files:
-  - desktop_base: aspera
-  - desktop_base: cellpose
-  - desktop_base: cellposesam
-  - desktop_base: cellposesam3d
-  - desktop_base: cellprofiler
-  - desktop_base: chimerax
-  - desktop_base: cp428
-  - desktop_base: dlc
-  - desktop_base: doublecmd
-  - desktop_base: fiji
-  - desktop_base: ilastik
-  - desktop_base: jipipe
-  - desktop_base: jupyter
-  - desktop_base: knime
-  - desktop_base: libre
-  - desktop_base: matlab
-  - desktop_base: mib3
-  - desktop_base: napari
-  - desktop_base: nninteractive
-  - desktop_base: omero
-  - desktop_base: owncloud
-  - desktop_base: panoply
-  - desktop_base: plantseg
-  - desktop_base: qupath
-  - desktop_base: rclone
-  - desktop_base: rstudio
-  - desktop_base: tissuumaps
-  - desktop_base: volseg
-  - desktop_base: xnd
+# the apptainer images (and helper scripts) the launchers run, on the NFS share
+desktop_containers_dir: /nfs/containers
+c: "{{ desktop_containers_dir }}"
 
-# launchers that were replaced; removed from /usr/share/applications
-# (cp425: CellProfiler 4.2.5, now cp428 = 4.2.8)
-gnome_desktop_files_removed:
-  - cp425
+# menu entries, one .desktop file each in /usr/share/applications.
+# icon: a file in files/ (copied to /usr/share/pixmaps) or a theme icon name;
+# category: X-ImageAnalysis, X-DataAccess, X-vEM (own submenus, files/gnome-config.menu)
+# or a standard one (Development, Office, System)
+desktop_launchers:
+  - {file: aspera, name: "Aspera Client", icon: aspera.png, category: X-DataAccess,
+     exec: "/bin/singularity run --nv {{ c }}/aspera"}
+  - {file: cellpose32d, name: "CellPose3 2D", icon: cellpose.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/cellpose /opt/conda/envs/cellpose/bin/cellpose"}
+  - {file: cellpose33d, name: "CellPose3 3D", icon: cellpose.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/cellpose /opt/conda/envs/cellpose/bin/cellpose --Zstack"}
+  - {file: cellposesam3d, name: "CellPose-SAM 3D", icon: cellpose.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/cellposesam3d /opt/conda/envs/cellpose/bin/cellpose --Zstack"}
+  - {file: cellprofiler, name: "CellProfiler 3", icon: cellprofiler.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity run --nv -B /scratch:/scratch {{ c }}/cellprofiler"}
+  - {file: chimerax, name: "ChimeraX", icon: chimerax.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/chimerax vglrun chimerax"}
+  - {file: cp425, name: "CellProfiler 4", icon: cellprofiler.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity run --nv -B /scratch:/scratch {{ c }}/cp425"}
+  - {file: dc, name: "Double Commander", icon: doublecmd.png, category: System,
+     exec: "/bin/singularity run --nv -B /scratch:/scratch {{ c }}/doublecmd"}
+  - {file: dlc, name: "DeepLabCut", icon: dlc.png, category: Development,
+     exec: "/bin/singularity run --nv -B /scratch:/scratch {{ c }}/dlc"}
+  # no icon of its own on the nodes yet (fi.png was never installed)
+  - {file: fi, name: "FishInspector", icon: applications-graphics, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv --env AGREE_TO_MATLAB_RUNTIME_LICENSE=yes -B /scratch:/scratch {{ c }}/fishinspector /opt/fishinspector/application/run_FishInspector.sh /opt/fishinspector/R2024a"}
+  - {file: fiji, name: "Fiji", icon: fiji.png, category: X-ImageAnalysis,
+     exec: "{{ c }}/fiji-start.sh"}
+  - {file: ilastik, name: "ilastik", icon: ilastik.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/ilastik /opt/conda/envs/ilastik/bin/ilastik"}
+  - {file: imod, name: "IMOD", icon: utilities-terminal, category: X-vEM,
+     exec: "gnome-terminal --window -- /bin/singularity shell --nv --env \"PS1=IMOD>\" -B /scratch:/scratch {{ c }}/imod"}
+  - {file: jupyter, name: "JupyterLab", icon: jupyter.png, category: Development,
+     exec: "/bin/singularity run --nv -B /scratch:/scratch {{ c }}/jupyter"}
+  - {file: knime, name: "KNIME", icon: knime.png, category: Development,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/knime /opt/knime/knime_4.7.4/knime"}
+  - {file: libre, name: "LibreOffice", icon: libre.png, category: Office,
+     exec: "/bin/singularity run -B /scratch:/scratch {{ c }}/libre"}
+  - {file: mib3, name: "MIB3", icon: mib_logo.jpg, category: X-vEM,
+     exec: "/bin/singularity exec --nv --env AGREE_TO_MATLAB_RUNTIME_LICENSE=yes -B /scratch:/scratch {{ c }}/mib3 /opt/mib3/run_MIB3.sh /opt/matlabruntime/R2026a"}
+  - {file: nninteractive, name: "nnInteractive", icon: nn.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/nninteractive vglrun -d egl /opt/conda/envs/nnInteractive/bin/napari -w napari-nninteractive"}
+  - {file: omero, name: "OMERO Client", icon: omero.png, category: X-DataAccess,
+     exec: "/bin/singularity run --nv {{ c }}/omero"}
+  - {file: owncloud, name: "ownCloud Client", icon: owncloud.png, category: X-DataAccess,
+     exec: "/bin/singularity run -B /scratch:/scratch {{ c }}/owncloud"}
+  - {file: panoply, name: "Panoply", icon: panoply.png, category: Office,
+     exec: "/bin/singularity run -B /scratch:/scratch {{ c }}/panoply"}
+  - {file: plantseg, name: "PlantSeg", icon: plantseg.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/plantseg /opt/conda/envs/plant-seg/bin/plantseg --gui"}
+  - {file: qupath, name: "QuPath", icon: qupath.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity run --nv -B /scratch:/scratch {{ c }}/qupath"}
+  - {file: rclone, name: "Rclone GUI", icon: rclone.png, category: X-DataAccess,
+     exec: "/usr/local/bin/rclone-gui"}
+  - {file: rstudio, name: "RStudio", icon: rstudio.png, category: Development,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/rstudio rstudio --no-sandbox"}
+  - {file: synapse, name: "Synapse-Net", icon: napari.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/synapsenet /opt/conda/envs/synapse-net/bin/napari"}
+  - {file: tissuumaps, name: "TissUUmaps", icon: tissuumaps.png, category: X-ImageAnalysis,
+     exec: "/bin/singularity exec --nv -B /scratch:/scratch {{ c }}/tissuumaps vglrun /opt/conda/envs/tissuumaps_env/bin/tissuumaps"}
+  - {file: volseg, name: "VolSeg Terminal", icon: volseg.png, category: X-vEM,
+     exec: "/bin/singularity run --nv -B /scratch:/scratch {{ c }}/volseg-terminal"}
+  - {file: xnd, name: "XNAT Desktop", icon: xnd.png, category: X-DataAccess,
+     exec: "/bin/singularity run {{ c }}/xnat-desktop"}
+
+# launchers no longer offered; removed from /usr/share/applications
+desktop_launchers_removed: []
+
+# helper scripts in /usr/local/bin (templates/<name>.j2)
+desktop_scripts:
+  - run_napari_vgl.sh
+  - start_matlab.sh

@@ -18,4 +18,12 @@
             <Category>X-ImageAnalysis</Category>
         </Include>
     </Menu>
+
+    <Menu>
+        <Name>vEM</Name>
+        <Directory>rfi-vem.directory</Directory>
+        <Include>
+            <Category>X-vEM</Category>
+        </Include>
+    </Menu>
 </Menu>
