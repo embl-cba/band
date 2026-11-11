@@ -36,9 +36,18 @@
   become: yes
   ignore_errors: true
 
+- name: "check the LDAP CA certificate is here"
+  assert:
+    that: lookup('ansible.builtin.fileglob', ldapCaCertSrc) | length > 0
+    fail_msg: "{{ ldapCaCertSrc }} is missing: run ldapserver.yml (it fetches the CA), or copy
+               /etc/pki/band-ldap-ca/ca.crt from the LDAP server there"
+    quiet: true
+  when: ldapCaCertSrc is defined
+
 - name: "Copy the CA cert"
   copy: src={{ ldapCaCertSrc }} dest={{ ldapCaCertFile }} owner=root mode=644
   become: yes
+  notify: restart sssd
   when: ldapCaCertSrc is defined
 
 - name: "Template CA cert"
