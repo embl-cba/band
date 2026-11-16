@@ -10,3 +10,14 @@ portal_tls: proxy
 # see tasks/tls_local.yml for the first one
 portal_letsencrypt_dir: "/etc/letsencrypt/live/{{ eosc_portal_hostname }}"
 portal_acme_webroot: /var/www/letsencrypt
+
+# text of the red banner above every page (HTML allowed, no backticks);
+# empty keeps the one built into band-portal-web
+portal_banner: ""
+
+# files added to the installed band-portal-web, e.g. logos:
+#   - {src: web-logos/cesnet.png, dest: images/logos/cesnet.png}
+portal_web_files: []
+# text replacements in the built front end (tasks/web.yml):
+#   - {name: ..., regexp: '<python regexp>', replace: '<text>'}
+portal_web_replacements: []

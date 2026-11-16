@@ -11,3 +11,31 @@ ca_pass_prase: !vault |
           66613164396431313563656633386463346434343339396130326235653766316461613762613739
           3138353131616633346233323439303737336634633262646166
 eosc_portal_hostname: "{{ site_portal_hostname }}"
+
+# cesnet changes to the built web front end (roles/eosc_vd_portal tasks/web.yml)
+portal_web_files:
+  - {src: web-logos/cesnet-white.png, dest: images/logos/cesnet-white.png}
+  - {src: web-logos/cesnet.png, dest: images/logos/cesnet.png}
+portal_web_replacements:
+  # logo strip at the top of every page (dark background: white text)
+  - name: CESNET logo in the header
+    regexp: 'alt:`NFDI4BIOIMAGE`\}\]'
+    replace: 'alt:`NFDI4BIOIMAGE`},{href:`https://www.cesnet.cz/`,src:`images/logos/cesnet-white.png`,alt:`CESNET`}]'
+  # acknowledgement page: a light tile after the EOSC-Life one
+  - name: CESNET logo on the acknowledgement page
+    regexp: '(alt="EOSC-Life"></a>)(?!\s*<a class="ack-logo ack-logo-light" href="https://www\.cesnet\.cz/")'
+    replace: '\1\n\t\t<a class="ack-logo ack-logo-light" href="https://www.cesnet.cz/" target="_blank" rel="noopener"><img src="images/logos/cesnet.png" alt="CESNET"></a>'
+  # Resources page: the cesnet cluster (5 nodes x 2 GPUs: 1x 2x RTX 2080, 4x 2x Tesla T4)
+  - name: GPUs on the Resources page
+    regexp: '\b8 GPUs for computation and graphics rendering'
+    replace: '10 GPUs for computation and graphics rendering'
+  - name: CPUs on the Resources page
+    regexp: '\b64 CPUs\b'
+    replace: '120 CPUs'
+  - name: RAM on the Resources page
+    regexp: '\b680GB RAM\b'
+    replace: '300GB RAM'
+  # the front end allows at most 40 GB per desktop
+  - name: desktop RAM limit on the Resources page
+    regexp: '&lt;=80G RAM'
+    replace: '&lt;=40G RAM'

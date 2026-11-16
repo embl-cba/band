@@ -82,6 +82,52 @@
     creates: "/var/www/html/band-portal-web-{{ band_portal_web_version }}/index.html"
   become: yes
 
+# Site changes to the built band-portal-web (its pages are compiled into
+# assets/index-*.js): the red banner text (portal_banner), extra files such
+# as logos (portal_web_files) and text replacements (portal_web_replacements;
+# each regexp must stop matching once replaced, so reruns change nothing).
+- name: band-portal-web extra files
+  copy:
+    src: "{{ item.src }}"
+    dest: "/var/www/html/band-portal-web-{{ band_portal_web_version }}/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ portal_web_files }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  become: yes
+
+- name: band-portal-web bundle
+  find:
+    paths: "/var/www/html/band-portal-web-{{ band_portal_web_version }}/assets"
+    patterns: "index-*.js"
+  register: band_portal_web_js
+  when: portal_banner | length > 0 or portal_web_replacements | length > 0
+
+# banner text: HTML allowed, no backticks; empty keeps the release's own
+- name: banner text
+  replace:
+    path: "{{ item.path }}"
+    regexp: 'banner:`[^`]*`'
+    replace: "banner:`{{ portal_banner }}`"
+  loop: "{{ band_portal_web_js.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when: portal_banner | length > 0
+  become: yes
+
+- name: site text in the front end
+  replace:
+    path: "{{ band_portal_web_js.files[0].path }}"
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+  loop: "{{ portal_web_replacements }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: portal_web_replacements | length > 0
+  become: yes
+
 # the release tarball keeps its builder's modes
 - name: band-portal-web files read-only
   file:
