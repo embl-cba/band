@@ -1,0 +1,11 @@
+---
+# CernVM-FS client: read-only software repositories mounted on demand under
+# /cvmfs (autofs). cesnet uses it for EESSI (role enable_lmod).
+cvmfs_repositories:
+  - software.eessi.io
+# no site squid: straight to the Stratum 1 servers
+cvmfs_http_proxy: DIRECT
+# local cache in /var/lib/cvmfs, MB
+cvmfs_quota_limit: 4000
+cvmfs_release_rpm: https://cvmrepo.s3.cern.ch/cvmrepo/yum/cvmfs-release-latest.noarch.rpm
+cvmfs_gpg_key: https://cvmrepo.s3.cern.ch/cvmrepo/yum/RPM-GPG-KEY-CernVM

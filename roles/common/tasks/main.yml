@@ -7,7 +7,7 @@
   dnf: name=epel-release state=present
 
 # apptainer provides /usr/bin/singularity, which the launchers in
-# /vd-containers call; java for nextflow
+# /nfs/containers call; java for nextflow
 - name: Install some standard packages
   dnf:
     name:
@@ -20,3 +20,12 @@
       - openssl
       - openssl-devel
     state: present
+
+# tools kept on the share (ome_zarr, /nfs/local/sbin) on every user's PATH
+- name: tools on the share in PATH
+  template:
+    src: nfs_tools.sh.j2
+    dest: /etc/profile.d/nfs_tools.sh
+    owner: root
+    group: root
+    mode: '0644'

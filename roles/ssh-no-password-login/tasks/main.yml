@@ -10,6 +10,25 @@
   register: sshd_dropin
   become: yes
 
+# a rebuilt host gets its old SSH host keys back, so users don't see "host
+# identification has changed": files/ssh_host_keys/<host>/ (not in git,
+# private keys vault-encrypted). Save them before a rebuild with
+#   ansible <host> -b -m fetch -a 'src=/etc/ssh/ssh_host_ed25519_key dest=files/ssh_host_keys/<host>/ flat=yes'
+# (each key and .pub), then: ansible-vault encrypt files/ssh_host_keys/<host>/*_key
+- name: saved SSH host keys
+  copy:
+    src: "{{ item }}"
+    dest: "/etc/ssh/{{ item | basename }}"
+    owner: root
+    group: "{{ 'root' if item.endswith('.pub') else 'ssh_keys' }}"
+    mode: "{{ '0644' if item.endswith('.pub') else '0640' }}"
+  loop: "{{ query('fileglob', playbook_dir ~ '/files/ssh_host_keys/' ~ inventory_hostname ~ '/ssh_host_*') }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  register: sshd_hostkeys
+  no_log: true
+  become: yes
+
 - name: check the sshd configuration
   command: sshd -t
   changed_when: false
@@ -21,5 +40,5 @@
   service:
     name: "{{ 'ssh' if ansible_distribution == 'Ubuntu' else 'sshd' }}"
     state: reloaded
-  when: sshd_dropin is changed or (crypto_policy_set is defined and crypto_policy_set is changed)
+  when: sshd_dropin is changed or sshd_hostkeys is changed or (crypto_policy_set is defined and crypto_policy_set is changed)
   become: yes

@@ -1,0 +1,5 @@
+---
+# tools on the share put in front of every user's PATH (/etc/profile.d/nfs_tools.sh)
+nfs_tools_path:
+  - /nfs/local/envs/ome_zarr/bin
+  - /nfs/local/sbin

@@ -10,11 +10,15 @@
   roles:
   - { role: vgl }
 
-# Lmod (environment modules), also on login-0
+# CernVM-FS (/cvmfs, for EESSI) and Lmod (environment modules, MODULEPATH
+# /nfs/modulefiles), also on login-0; EESSI is set up for login shells on
+# login-0 only (roles/enable_lmod/defaults: eessi_version, eessi_groups)
 - hosts: 'LoginNodes:DesktopNodes'
   gather_facts: true
+  become: yes
   tags: lmod
   roles:
+  - { role: cvmfs }
   - { role: enable_lmod }
 
 # TigerVNC with the GNOME flashback/metacity session (login-0 doesn't serve

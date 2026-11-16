@@ -1,39 +1,50 @@
 ---
-- include_vars: "{{ ansible_os_family }}.yml"
+# Lmod from EPEL; some of its lua modules need crb (Rocky 9)
+- name: check crb is enabled
+  shell: dnf repolist --enabled | grep -q '^crb '
+  register: crb_enabled
+  changed_when: false
+  failed_when: false
+  check_mode: false
 
-# the extra devel repo is "powertools" on Rocky 8 and "crb" on Rocky 9
-- name: enable powertools/crb
-  command: dnf config-manager --set-enabled {{ 'crb' if ansible_distribution_major_version | int >= 9 else 'powertools' }}
-  become: yes
-  when: ansible_distribution == "Rocky"
+- name: enable crb
+  command: dnf config-manager --set-enabled crb
+  when: crb_enabled.rc != 0
 
-# Lmod and lua-filesystem come from EPEL
 - name: add epel
   dnf: name=epel-release state=present
-  become: yes
-  when: ansible_distribution == "Rocky"
-
-- name: install lua
-  yum: name={{ item }} state=installed
-  with_items:
-    - lua
-    - lua-filesystem
-    - lua-posix
-  become: yes
-  when: ansible_facts['os_family'] == 'RedHat'
 
 - name: install Lmod
-  yum:
-    name: Lmod
-    state: present
-  become: yes
-  when: ansible_distribution == "Rocky"
+  dnf: name=Lmod state=present
+  register: lmod_pkg
+  # in --check a fresh host has no EPEL yet
+  when: not (ansible_check_mode and crb_enabled.rc != 0)
 
-# /usr/share/lmod/lmod is a symlink to the installed version
-- name: link bash
-  file: src=/usr/share/lmod/lmod/init/bash dest=/etc/profile.d/lmod.sh state=link
-  become: yes
+# the Lmod package sets MODULEPATH to /etc/modulefiles:/usr/share/modulefiles;
+# these replace it with lmod_modulepath for every login shell
+- name: module path for sh and csh
+  template:
+    src: "z00_lmod.{{ item }}.j2"
+    dest: "/etc/profile.d/z00_lmod.{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: [sh, csh]
 
-- name: link csh
-  file: src=/usr/share/lmod/lmod/init/cshrc dest=/etc/profile.d/lmod.csh state=link
-  become: yes
+# EESSI software stack from /cvmfs (role cvmfs), only on the hosts in
+# eessi_groups; its init brings its own Lmod and adds its modules after
+# lmod_modulepath
+- name: EESSI {{ eessi_version }}
+  template:
+    src: z_eessi.sh.j2
+    dest: /etc/profile.d/z_eessi.sh
+    owner: root
+    group: root
+    mode: '0644'
+  when: eessi_enabled
+
+- name: no EESSI here
+  file:
+    path: /etc/profile.d/z_eessi.sh
+    state: absent
+  when: not eessi_enabled

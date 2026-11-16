@@ -19,3 +19,6 @@ __pycache__/
 
 # the LDAP CA certificate ldapserver.yml fetches (site-specific)
 /files/ldap-ca-*.crt
+
+# host keys saved from a host before a rebuild (private keys vault-encrypted)
+/files/ssh_host_keys/

@@ -1,0 +1,5 @@
+# managed by ansible (BAND, role enable_lmod)
+if ( -f /usr/share/lmod/lmod/init/csh ) then
+    source /usr/share/lmod/lmod/init/csh
+    setenv MODULEPATH {{ lmod_modulepath | join(':') }}
+endif
