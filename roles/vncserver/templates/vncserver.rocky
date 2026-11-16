@@ -71,7 +71,7 @@ $defaultConfig
        "## in this file. See the following manpages for more: vncserver(1) Xvnc(1).\n".
        "## Several common ones are shown below. Uncomment and modify to your liking.\n".
        "##\n".
-       "securitytypes=none\n".
+       "# securitytypes=vncauth,tlsvnc\n".
        "# desktop=sandbox\n".
        "# geometry=2000x1200\n".
        "# localhost\n".

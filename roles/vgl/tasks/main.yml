@@ -10,54 +10,45 @@
     gpgkey:
       - https://packagecloud.io/dcommander/virtualgl/gpgkey
       - https://raw.githubusercontent.com/VirtualGL/repo/main/VGL-GPG-KEY
+  register: vgl_repo
 
+# in --check a new repository isn't really there yet
 - name: Install VirtualGL
   dnf:
     name: VirtualGL-{{ vgl_version }}
     state: present
+  when: not (ansible_check_mode and vgl_repo is changed)
 
-- name: Check whether VirtualGL is configured
-  stat:
-    path: /etc/udev/rules.d/99-virtualgl-dri.rules
-  register: vgl_configured
+# what vglserver_config +egl +s +f sets up: every user may open the GPUs' DRI
+# devices. vglserver_config itself unloads and reloads the nvidia modules,
+# which fails on a node in use (nvidia-drm: "Failed to allocate
+# NvKmsKapiDevice" leaves the GPUs without /dev/dri devices until a reboot),
+# so write its udev rule here and apply it without touching the driver.
+# Jobs still only reach their own GPUs (Slurm's ConstrainDevices).
+- name: DRI devices open to all users
+  copy:
+    dest: /etc/udev/rules.d/99-virtualgl-dri.rules
+    content: |
+      # managed by ansible (BAND)
+      SUBSYSTEM=="drm", KERNEL=="card*|renderD*", MODE="0666"
+    owner: root
+    group: root
+    mode: '0644'
+  register: vgl_udev
 
-# vglserver_config reloads the nvidia modules to apply device permissions,
-# which fails while nvidia-persistenced holds them
-- name: Configure VirtualGL
-  when: not vgl_configured.stat.exists
-  block:
-  - name: Stop nvidia-persistenced
-    systemd:
-      name: nvidia-persistenced
-      state: stopped
+- name: apply the udev rule
+  command: udevadm trigger --subsystem-match=drm --action=change
+  when: vgl_udev is changed
 
-  # +s/+f: all users (LDAP users are not in a vglusers group)
-  - name: Run vglserver_config for the EGL back end
-    command: vglserver_config +egl +s +f
-    register: vgl_config
-    failed_when: vgl_config.rc != 0 or 'IMPORTANT NOTE' in vgl_config.stdout
+# the nodes also have a virtio_gpu card (card0); VGL_DISPLAY picks the job's
+# NVIDIA GPU (vgl-display)
+- name: vgl-display
+  template:
+    src: vgl-display.j2
+    dest: /usr/local/bin/vgl-display
+    mode: '0755'
 
-  always:
-  - name: Start nvidia-persistenced
-    systemd:
-      name: nvidia-persistenced
-      state: started
-
-# the nodes also have a virtio_gpu card, so point VirtualGL at the V100 explicitly
-- name: Find the NVIDIA DRI device
-  shell: ls -d /sys/bus/pci/drivers/nvidia/0000:* | head -1 | xargs basename
-  register: nvidia_pci
-  changed_when: false
-  # read-only, so it also runs in --check (the next task needs its output)
-  check_mode: false
-
-- name: Check the NVIDIA DRI device exists
-  stat:
-    path: /dev/dri/by-path/pci-{{ nvidia_pci.stdout }}-card
-  register: vgl_dev
-  failed_when: not vgl_dev.stat.exists
-
-- name: Set the default VirtualGL device for all users
+- name: Set VGL_DISPLAY for all users
   template:
     src: "{{ item }}.j2"
     dest: /etc/profile.d/{{ item }}
@@ -66,13 +57,31 @@
     - virtualgl.sh
     - virtualgl.csh
 
-# as a normal user, so it also proves the device permissions work for everyone
-- name: Check VirtualGL can render on the V100
-  shell: /opt/VirtualGL/bin/eglinfo $(readlink -f /dev/dri/by-path/pci-{{ nvidia_pci.stdout }}-card) -B
+# nvidia-drm gives each GPU a /dev/dri/cardN; without it EGL can't render
+- name: NVIDIA DRI devices
+  shell: |
+    rc=0
+    for d in /proc/driver/nvidia/gpus/*; do
+      c=/dev/dri/by-path/pci-$(basename $d)-card
+      if [ -e $c ]; then readlink -f $c
+      else echo "no DRI device for GPU $(basename $d) (nvidia-drm failed to load?): reboot this node" >&2; rc=1; fi
+    done
+    exit $rc
+  register: vgl_cards
+  changed_when: false
+  check_mode: false
+  failed_when: vgl_cards.rc != 0 or vgl_cards.stdout_lines | length == 0
+
+# as a normal user on every GPU, so it also proves the device permissions work
+# for everyone
+- name: Check VirtualGL can render on each GPU
+  command: /opt/VirtualGL/bin/eglinfo {{ item }} -B
   become_user: "{{ ansible_ssh_user }}"
+  loop: "{{ vgl_cards.stdout_lines }}"
   register: vgl_eglinfo
   changed_when: false
-  failed_when: vgl_eglinfo.rc != 0 or 'V100' not in vgl_eglinfo.stdout
+  check_mode: false
+  failed_when: vgl_eglinfo.rc != 0 or 'NVIDIA' not in vgl_eglinfo.stdout
 
 - debug:
-    msg: "{{ vgl_eglinfo.stdout_lines | select('search', 'renderer|version string') | list }}"
+    msg: "{{ vgl_eglinfo.results | map(attribute='stdout_lines') | flatten | select('search', 'renderer string') | list }}"

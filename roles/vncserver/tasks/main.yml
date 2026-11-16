@@ -53,6 +53,28 @@
     enabled: no
   when: system_group_packages is defined
 
+# VirtualGL renders through EGL (role vgl), so the nodes need no X server of
+# their own: no gdm (its Xorg would sit on GPU 0), boot to the text target.
+# The desktops are the users' Xvnc sessions.
+- name: no display manager
+  become: yes
+  systemd:
+    name: gdm
+    state: stopped
+    enabled: no
+  when: system_group_packages is defined
+
+- name: default boot target
+  command: systemctl get-default
+  register: default_target
+  changed_when: false
+  check_mode: false
+
+- name: boot to multi-user.target
+  become: yes
+  command: systemctl set-default multi-user.target
+  when: default_target.stdout | trim != 'multi-user.target'
+
 - name: install system packages yum
   yum: name={{ item }} state=present update_cache=yes
   become: yes
@@ -70,6 +92,21 @@
   become: yes
   changed_when: false
   when: ansible_facts['os_family'] == 'RedHat'
+
+# the portal reaches a desktop through an ssh tunnel to localhost on the node:
+# Xvnc must not listen on the network (the portal's command line can't
+# override this, it doesn't pass -localhost)
+- name: Xvnc on localhost only
+  become: yes
+  copy:
+    dest: /etc/tigervnc/vncserver-config-mandatory
+    content: |
+      # managed by ansible (BAND)
+      # desktops are reached through ssh tunnels to localhost only
+      localhost
+    owner: root
+    group: root
+    mode: '0644'
 
 # GNOME flashback/metacity default xstartup, default geometry 1440x900
 - name: vncserver script

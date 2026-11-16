@@ -1,0 +1,19 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Prints the DRI device VirtualGL's EGL back end should render on: the GPU
+# Slurm gave this job (SLURM_JOB_GPUS holds the /dev/nvidiaN numbers), else
+# the first NVIDIA GPU. With ConstrainDevices=yes a job can only use its own
+# GPUs, so this has to follow the allocation. The cardN number can change
+# between boots, hence the lookup via the PCI address.
+want=${SLURM_JOB_GPUS%%,*}
+for d in /proc/driver/nvidia/gpus/*; do
+  [ -r "$d/information" ] || continue
+  minor=$(awk '/^Device Minor:/ {print $3}' "$d/information")
+  if [ -z "$want" ] || [ "$minor" = "$want" ]; then
+    card="/dev/dri/by-path/pci-$(basename "$d")-card"
+    [ -e "$card" ] || exit 1
+    readlink -f "$card"
+    exit 0
+  fi
+done
+exit 1
