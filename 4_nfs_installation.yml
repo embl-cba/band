@@ -21,6 +21,16 @@
     check_mode: false
     loop: "{{ nfs_mounts | map(attribute='path') | list }}"
 
+  # mgmt/login keep SELinux enforcing: without this sshd can't read
+  # ~/.ssh/authorized_keys in the NFS homes (key logins fail)
+  - name: allow home directories on NFS under SELinux
+    seboolean:
+      name: use_nfs_home_dirs
+      state: true
+      persistent: true
+    become: yes
+    when: ansible_selinux.status == 'enabled'
+
   - name: check the share has the link targets
     stat: path={{ item }}
     register: nfs_dirs
