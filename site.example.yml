@@ -56,6 +56,14 @@ site_reverse_proxy: "10.0.0.30"
 # optional, GPU nodes (roles/rocky9gpu/defaults): driver version, kernel
 # module type (open needs Turing or newer), and whether the role may reboot
 # a node by itself (false: it stops and says a reboot is needed)
-# nvidia_driver_version: 580.196.07
+# nvidia_driver_version: 620.70.06
 # nvidia_kernel_module_type: proprietary
 # nvidia_allow_reboot: true
+
+# optional, Slurm accounting (roles/slurmdb-config): the job history of a
+# previous instance, a gzipped "mysqldump --databases slurm_acct_db" on the
+# ansible host; restored only into an empty database, before slurmdbd starts
+# for the first time (it converts the tables if Slurm is newer). The new
+# slurm.conf must keep the old ClusterName and set FirstJobId above the old
+# job ids.
+# slurmdbd_restore_dump: /home/ubuntu/backups/slurm_acct_db.sql.gz

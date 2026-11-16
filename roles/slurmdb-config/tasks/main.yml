@@ -40,3 +40,53 @@
   template: src=slurmdblog.j2 dest=/etc/logrotate.d/slurmdb mode=644
   become: yes
 
+
+# job history of a previous instance (site.yml: slurmdbd_restore_dump, a
+# gzipped mysqldump of slurm_acct_db on the ansible host). Only into an empty
+# database, so a rerun never overwrites live accounting; this role runs
+# before slurmdbd's first start (slurm-start), which then upgrades the tables.
+- name: restore the accounting database
+  when: slurmdbd_restore_dump | default('') | length > 0
+  become: yes
+  block:
+  - name: tables in {{ slurmdbd_db_name }}
+    community.mysql.mysql_query:
+      login_user: root
+      login_password: "{{ sqlrootPasswd }}"
+      login_unix_socket: /var/lib/mysql/mysql.sock
+      query: "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = %s"
+      positional_args: ["{{ slurmdbd_db_name }}"]
+    register: acct_tables
+    check_mode: false
+    # in --check on a fresh host there is no MariaDB yet
+    ignore_errors: "{{ ansible_check_mode }}"
+
+  - name: "{{ slurmdbd_db_name }} isn't empty: not restoring"
+    debug:
+      msg: "{{ acct_tables.query_result[0][0].n }} tables already there, {{ slurmdbd_restore_dump }} not loaded"
+    when: acct_tables.query_result is defined and acct_tables.query_result[0][0].n | int > 0
+
+  - name: load {{ slurmdbd_restore_dump | basename }}
+    when: acct_tables.query_result is defined and acct_tables.query_result[0][0].n | int == 0
+    block:
+    - name: copy the dump
+      copy:
+        src: "{{ slurmdbd_restore_dump }}"
+        dest: /root/slurm_acct_db-restore.sql.gz
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: import it
+      community.mysql.mysql_db:
+        name: "{{ slurmdbd_db_name }}"
+        state: import
+        target: /root/slurm_acct_db-restore.sql.gz
+        login_user: root
+        login_password: "{{ sqlrootPasswd }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+    always:
+    - name: remove the copy
+      file:
+        path: /root/slurm_acct_db-restore.sql.gz
+        state: absent

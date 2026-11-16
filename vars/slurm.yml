@@ -4,8 +4,10 @@ desktopNodeList:
 clustername: "mbp"
 projectname: "band"
 slurm_version: 25.11.4
-munge_version: 0.5.13   # cesnet: what the cluster runs (built with OpenSSL 3)
-nhc_version: 1.4.2
+munge_version: 0.5.18
+nhc_version: "1.5"
+# release tarball name (1.4.x shipped .tar.xz, 1.5 ships .tar.gz)
+nhc_tarball: lbnl-nhc-{{ nhc_version }}.tar.gz
 munge_dir: /opt/munge-{{ munge_version }}
 slurm_dir: /opt/slurm-{{ slurm_version }}
 nhc_dir: /opt/nhc-{{ nhc_version }}

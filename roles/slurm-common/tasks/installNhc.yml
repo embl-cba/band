@@ -10,12 +10,12 @@
   block:
   - name: get nhc
     get_url:
-      url: https://github.com/mej/nhc/releases/download/{{ nhc_version }}/lbnl-nhc-{{ nhc_version }}.tar.xz
-      dest: /tmp/lbnl-nhc-{{ nhc_version }}.tar.xz
+      url: https://github.com/mej/nhc/releases/download/{{ nhc_version }}/{{ nhc_tarball }}
+      dest: /tmp/{{ nhc_tarball }}
 
   - name: untar nhc
     unarchive:
-      src: /tmp/lbnl-nhc-{{ nhc_version }}.tar.xz
+      src: /tmp/{{ nhc_tarball }}
       dest: /tmp
       remote_src: yes
       creates: /tmp/lbnl-nhc-{{ nhc_version }}/configure
