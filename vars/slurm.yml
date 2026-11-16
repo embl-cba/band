@@ -57,6 +57,6 @@ slurm_gres_list:
 # as slurmdb@mgmt-0.vm.fedcloud.eu (no @localhost, no @<fqdn>)
 slurmdb_mysql_user_host: mgmt-0.vm.fedcloud.eu
 slurmdb_mysql_user_hosts_group: []
-# cesnet: MariaDB runs with its defaults, no job mail (no MailProg in slurm.conf)
-mysql_innodb_settings: false
+# cesnet: no job mail (no MailProg in slurm.conf); InnoDB settings on (mgmt-0 has 16 GB)
+mysql_innodb_settings: true
 slurm_job_mail: false

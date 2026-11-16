@@ -24,7 +24,8 @@
     shell: ./configure --prefix={{ nhc_dir }} && make
     args:
       chdir: /tmp/lbnl-nhc-{{ nhc_version }}
-      creates: /tmp/lbnl-nhc-{{ nhc_version }}/nhc
+      # 1.5 ships a ready "nhc" script, so key on what configure writes
+      creates: /tmp/lbnl-nhc-{{ nhc_version }}/Makefile
 
   - name: install nhc
     shell: make install

@@ -1,4 +1,14 @@
 ---
+# slurmdbd.conf belongs to SlurmUser; on a fresh host slurm-common (which
+# also creates it) hasn't run yet. Same ids as there.
+- name: create slurm group
+  group: name=slurm system=yes gid=497
+  become: yes
+
+- name: create slurm user
+  user: name=slurm group=slurm system=yes createhome=no uid=497
+  become: yes
+
 - name: install deps in control node
   yum: name={{ item }} state=installed
   become: yes

@@ -12,7 +12,7 @@
   when: ansible_distribution == "Rocky"
 
 # values slurmdbd checks at startup (it warns about the MariaDB defaults);
-# the buffer pool is kept small because mgmt-0 has under 4 GB of RAM
+# 1 GB buffer pool by default (mysql_innodb_buffer_pool_size)
 - name: InnoDB settings for slurmdbd
   copy:
     dest: /etc/my.cnf.d/slurmdbd.cnf
