@@ -45,24 +45,34 @@
 
 # the GUI group pulls in firewalld enabled; it blocks slurmd (6818) and srun
 # ports after the next reboot. The cluster relies on the OpenStack security groups.
+- name: firewalld installed
+  stat:
+    path: /usr/lib/systemd/system/firewalld.service
+  register: firewalld_unit
+
 - name: keep firewalld off
   become: yes
   systemd:
     name: firewalld
     state: stopped
     enabled: no
-  when: system_group_packages is defined
+  when: firewalld_unit.stat.exists
 
 # VirtualGL renders through EGL (role vgl), so the nodes need no X server of
 # their own: no gdm (its Xorg would sit on GPU 0), boot to the text target.
 # The desktops are the users' Xvnc sessions.
+- name: gdm installed
+  stat:
+    path: /usr/lib/systemd/system/gdm.service
+  register: gdm_unit
+
 - name: no display manager
   become: yes
   systemd:
     name: gdm
     state: stopped
     enabled: no
-  when: system_group_packages is defined
+  when: gdm_unit.stat.exists
 
 - name: default boot target
   command: systemctl get-default

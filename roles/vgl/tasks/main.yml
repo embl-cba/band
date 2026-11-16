@@ -74,6 +74,12 @@
 
 # as a normal user on every GPU, so it also proves the device permissions work
 # for everyone
+# in --check on a fresh host VirtualGL isn't installed yet
+- name: VirtualGL installed
+  stat:
+    path: /opt/VirtualGL/bin/eglinfo
+  register: vgl_eglinfo_bin
+
 - name: Check VirtualGL can render on each GPU
   command: /opt/VirtualGL/bin/eglinfo {{ item }} -B
   become_user: "{{ ansible_ssh_user }}"
@@ -82,6 +88,8 @@
   changed_when: false
   check_mode: false
   failed_when: vgl_eglinfo.rc != 0 or 'NVIDIA' not in vgl_eglinfo.stdout
+  when: vgl_eglinfo_bin.stat.exists
 
 - debug:
     msg: "{{ vgl_eglinfo.results | map(attribute='stdout_lines') | flatten | select('search', 'renderer string') | list }}"
+  when: vgl_eglinfo_bin.stat.exists

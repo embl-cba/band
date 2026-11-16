@@ -2,13 +2,3 @@
 # module directories every login shell gets, first one first
 lmod_modulepath:
   - /nfs/modulefiles
-
-# EESSI (https://www.eessi.io), from /cvmfs/software.eessi.io (role cvmfs).
-# The version is the users' software stack: changing it changes every module
-# they load. Empty eessi_version turns it off everywhere.
-eessi_version: "2023.06"
-# inventory groups that get it (cesnet: login-0 only, as before)
-eessi_groups:
-  - LoginNodes
-eessi_enabled: "{{ eessi_version | length > 0 and
-                   (group_names | intersect(eessi_groups) | length > 0) }}"

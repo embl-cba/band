@@ -30,21 +30,3 @@
     group: root
     mode: '0644'
   loop: [sh, csh]
-
-# EESSI software stack from /cvmfs (role cvmfs), only on the hosts in
-# eessi_groups; its init brings its own Lmod and adds its modules after
-# lmod_modulepath
-- name: EESSI {{ eessi_version }}
-  template:
-    src: z_eessi.sh.j2
-    dest: /etc/profile.d/z_eessi.sh
-    owner: root
-    group: root
-    mode: '0644'
-  when: eessi_enabled
-
-- name: no EESSI here
-  file:
-    path: /etc/profile.d/z_eessi.sh
-    state: absent
-  when: not eessi_enabled
