@@ -160,6 +160,24 @@
     command: /tmp/NVIDIA-Linux-x86_64-{{ nvidia_driver_version }}.run --silent --accept-license --dkms --disable-nouveau --kernel-module-type={{ nvidia_kernel_module_type }} --rebuild-initramfs --allow-installation-with-running-driver
     args:
       chdir: /tmp
+    register: nvidia_installed
+
+# the installer test-loads the module before its firmware (GSP) files are in
+# /lib/firmware, so the GPUs stay unusable ("No devices were found",
+# "Failed to allocate NvKmsKapiDevice") until the next boot
+- name: Stop when the new driver needs a reboot but reboots aren't allowed
+  fail:
+    msg: "{{ inventory_hostname }}: NVIDIA {{ nvidia_driver_version }} installed, the GPUs work only
+          after a reboot; nvidia_allow_reboot is false: drain it, reboot it, run this again"
+  when: nvidia_installed is changed and not (nvidia_allow_reboot | bool)
+
+- name: Reboot so the driver loads with its firmware
+  reboot:
+    msg: "Rebooting to load the NVIDIA driver"
+    connect_timeout: 5
+    reboot_timeout: 900
+    post_reboot_delay: 30
+  when: nvidia_installed is changed
 
 - name: Install nvidia-persistenced service
   copy:
@@ -181,6 +199,8 @@
   register: nvidia_smi
   changed_when: false
   check_mode: false
+  # "No devices found." comes with exit code 0
+  failed_when: nvidia_smi.rc != 0 or 'GPU ' not in nvidia_smi.stdout
   async: 60
   poll: 5
 

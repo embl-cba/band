@@ -1,7 +1,7 @@
 ---
+# waits until the node is back, so the next playbook can follow straight away
 - name: Reboot system
-  command: shutdown -r now "Rebooting to apply SELinux changes"
-  async: 1
-  poll: 0
-  ignore_errors: yes
-
+  reboot:
+    msg: "Rebooting to apply SELinux changes"
+    reboot_timeout: 900
+    post_reboot_delay: 20
