@@ -59,4 +59,5 @@ slurmdb_mysql_user_host: mgmt-0.vm.fedcloud.eu
 slurmdb_mysql_user_hosts_group: []
 # cesnet: no job mail (no MailProg in slurm.conf); InnoDB settings on (mgmt-0 has 16 GB)
 mysql_innodb_settings: true
+mysql_innodb_buffer_pool_size: 4096M
 slurm_job_mail: false
