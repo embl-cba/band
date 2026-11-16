@@ -1,0 +1,12 @@
+---
+# Where TLS for the portal ends:
+#   proxy: at a separate reverse proxy (files/reverse-proxy.conf.example);
+#          nginx here serves the front end on plain port 80 (tubi)
+#   local: at nginx on this VM, with a Let's Encrypt certificate; it also
+#          routes /client, /guacamole and /kc to Tomcat and eosc-rs (cesnet)
+portal_tls: proxy
+
+# local: the certificate (certbot, renewed by its timer through the webroot);
+# see tasks/tls_local.yml for the first one
+portal_letsencrypt_dir: "/etc/letsencrypt/live/{{ eosc_portal_hostname }}"
+portal_acme_webroot: /var/www/letsencrypt

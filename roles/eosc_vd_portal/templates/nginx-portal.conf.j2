@@ -1,3 +1,70 @@
+{% if portal_tls == 'local' %}
+# portal_tls: local. TLS ends here for {{ eosc_portal_hostname }}: / is the front
+# end, /client and /guacamole go to Tomcat (:8080), /kc to eosc-rs
+# (:{{ resource_server_port }}), all on this VM.
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    server_tokens off;
+
+    # Let's Encrypt renewals (certbot --webroot)
+    location /.well-known/acme-challenge/ {
+        root {{ portal_acme_webroot }};
+    }
+    location / {
+        return 301 https://{{ eosc_portal_hostname }}$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
+    server_name {{ eosc_portal_hostname }};
+    server_tokens off;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_certificate {{ portal_letsencrypt_dir }}/fullchain.pem;
+    ssl_certificate_key {{ portal_letsencrypt_dir }}/privkey.pem;
+    ssl_session_cache shared:SSL:1m;
+    ssl_session_timeout 10m;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # link to the front end in use (portal_frontend)
+    root /var/www/html/portal;
+    index index.html;
+
+    # pages always fresh; assets/ have content hashes in their names
+    location ~* \.html$ {
+        add_header Cache-Control "no-cache";
+    }
+
+    location /client {
+        proxy_pass http://127.0.0.1:8080/client;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+    location /guacamole {
+        proxy_pass http://127.0.0.1:8080/guacamole;
+    }
+    location /guacamole/websocket-tunnel {
+        proxy_pass http://127.0.0.1:8080/guacamole/websocket-tunnel;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+    }
+    location /kc {
+        proxy_pass http://127.0.0.1:{{ resource_server_port }}/kc;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+{% else %}
 # Front end only; the reverse proxy terminates TLS for {{ eosc_portal_hostname }}
 # and sends / here, /client and /guacamole to Tomcat (:8080) and /kc to eosc-rs
 # (:{{ resource_server_port }}).
@@ -16,3 +83,4 @@ server {
         add_header Cache-Control "no-cache";
     }
 }
+{% endif %}

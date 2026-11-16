@@ -195,6 +195,17 @@
   become: yes
   notify: restart tomcat
 
+# portal_tls: local: nginx on this VM is Tomcat's only client, so keep 8080
+# off the public address
+- name: Tomcat on localhost only
+  replace:
+    path: "{{ tomcat_dir }}/conf/server.xml"
+    regexp: '<Connector port="8080" protocol="HTTP/1\.1"(?! address=)'
+    replace: '<Connector port="8080" protocol="HTTP/1.1" address="127.0.0.1"'
+  when: portal_tls == 'local'
+  become: yes
+  notify: restart tomcat
+
 ######## service
 - name: tomcat systemd unit
   template:

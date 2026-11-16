@@ -135,7 +135,7 @@
                 },
                 "startServer": {
                     "async": false,
-                    "cmd": "mkdir -p ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=$( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo $passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e '#!/bin/bash\n vncserver -geometry {resolution} -securitytypes none; sleep 36000000 ' | {{ portal_slurm_bin }}/sbatch -p batch -s -n 1 -c {ppn} --mem={mem}gb  --gres=gpu:{gpu} --time={hours}:00:00 -J desktop_'test' -o .vnc/slurm-%j.out",
+                    "cmd": "mkdir -p ~/.vnc ; rm -f ~/.vnc/clearpass ; touch ~/.vnc/clearpass ; chmod 600 ~/.vnc/clearpass ; passwd=$( dd if=/dev/urandom bs=1 count=8 2>/dev/null | md5sum | cut -b 1-8 ) ; echo $passwd > ~/.vnc/clearpass ; cat ~/.vnc/clearpass | vncpasswd -f > ~/.vnc/passwd ; chmod 600 ~/.vnc/passwd ; echo -e '#!/bin/bash\n vncserver -geometry {resolution} -SecurityTypes VncAuth; sleep 36000000 ' | {{ portal_slurm_bin }}/sbatch -p batch -s -n 1 -c {ppn} --mem={mem}gb  --gres=gpu:{gpu} --time={hours}:00:00 -J desktop_'test' -o .vnc/slurm-%j.out",
                     "failFatal": true,
                     "formatFatal": false,
                     "host": "login",

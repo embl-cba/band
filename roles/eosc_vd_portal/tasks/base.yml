@@ -45,4 +45,6 @@
   retries: 10
   delay: 3
   changed_when: false
+  # a read-only ping; runs in --check too (else the retries see no output)
+  check_mode: false
   become: yes

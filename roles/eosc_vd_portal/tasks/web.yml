@@ -2,7 +2,7 @@
 # The static front end, served by nginx on port 80 from /var/www/html/portal,
 # a link to band-portal-web (default) or to the old eosc-js, both installed
 # (portal_frontend). TLS and the routing of /client, /guacamole and /kc are
-# done by the reverse proxy.
+# done by the reverse proxy, or by nginx here with portal_tls: local.
 - name: Create /var/www/html/eosc-js-<version>
   file:
     path: "/var/www/html/eosc-js-{{eosc_js_version}}"
@@ -104,6 +104,10 @@
     force: yes
   become: yes
 
+# portal_tls: local needs the certificate before nginx can use the site
+- include_tasks: tls_local.yml
+  when: portal_tls == 'local'
+
 - name: nginx site for the front end
   template:
     src: nginx-portal.conf.j2
@@ -127,6 +131,11 @@
     state: absent
   become: yes
   notify: reload nginx
+
+- name: nginx configuration is valid
+  command: nginx -t
+  changed_when: false
+  become: yes
 
 - name: nginx running
   systemd:

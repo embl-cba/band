@@ -1,0 +1,71 @@
+---
+# portal_tls: local. nginx on this VM ends TLS with a Let's Encrypt
+# certificate (templates/nginx-portal.conf.j2 routes the rest).
+#
+# The certificate has to be in {{ portal_letsencrypt_dir }} before this runs:
+# - moving from an old portal VM: copy its /etc/letsencrypt (with the
+#   account and renewal settings), then renewals go on here;
+# - new name, or after the name points here: with nginx stopped,
+#     certbot certonly --standalone -d <name>
+# certbot's own timer renews it through the webroot below.
+- name: certbot
+  apt:
+    name: certbot
+    state: present
+  become: yes
+
+- name: the certificate is there
+  stat:
+    path: "{{ portal_letsencrypt_dir }}/fullchain.pem"
+  register: portal_le_cert
+  become: yes
+
+- name: no certificate yet
+  fail:
+    msg: >-
+      {{ portal_letsencrypt_dir }}/fullchain.pem is missing: copy /etc/letsencrypt
+      from the old portal, or get one with certbot (see roles/eosc_vd_portal/tasks/tls_local.yml)
+  when: not portal_le_cert.stat.exists
+
+- name: ACME webroot
+  file:
+    path: "{{ portal_acme_webroot }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+# renewals answer through nginx (port 80 stays up), whatever the certificate
+# was first issued with
+- name: renew through the webroot
+  community.general.ini_file:
+    path: "/etc/letsencrypt/renewal/{{ eosc_portal_hostname }}.conf"
+    section: renewalparams
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    mode: '0644'
+  loop:
+    - {option: authenticator, value: webroot}
+    - {option: webroot_path, value: "{{ portal_acme_webroot }},"}
+  loop_control:
+    label: "{{ item.option }}"
+  become: yes
+
+- name: reload nginx after a renewal
+  copy:
+    dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
+    content: |
+      #!/bin/sh
+      systemctl reload nginx
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+
+- name: certbot's renewal timer
+  systemd:
+    name: certbot.timer
+    enabled: yes
+    state: started
+  become: yes
