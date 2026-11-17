@@ -185,6 +185,7 @@
     state: present
   when: keycloak_backup_nfs | length > 0
   become: yes
+  tags: keycloak_backup
 
 - name: "{{ keycloak_backup_dir }}"
   file:
@@ -194,11 +195,13 @@
     group: root
     mode: '0700'
   become: yes
+  tags: keycloak_backup
 
 - name: mail when the backup fails
   import_role:
     name: failure_mail
   when: failure_mail_to | default('') | length > 0
+  tags: keycloak_backup
 
 - name: backup script
   template:
@@ -208,6 +211,7 @@
     group: root
     mode: '0750'
   become: yes
+  tags: keycloak_backup
 
 - name: backup service and timer
   copy:
@@ -243,6 +247,7 @@
   loop_control:
     label: "{{ item.name }}"
   become: yes
+  tags: keycloak_backup
 
 - name: backup timer enabled
   systemd:
@@ -251,3 +256,4 @@
     state: started
     daemon_reload: yes
   become: yes
+  tags: keycloak_backup
