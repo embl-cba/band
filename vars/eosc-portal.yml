@@ -49,3 +49,7 @@ portal_web_replacements:
   - name: maintenance on the Status page
     regexp: '<p><i class="bi bi-emoji-smile status-ok"></i>There''s currently no system downtime planned\. </p>'
     replace: '<p><i class="bi bi-tools status-ok" style="color:#f9b233"></i>BAND is under maintenance until November 23, 2026. </p>'
+  # acknowledgement page: CESNET's required acknowledgement as the second point
+  - name: CESNET acknowledgement text
+    regexp: '(501864659\. </p>\s*</li>)(?!\s*<li>\s*<p>Access to CESNET)'
+    replace: '\1\n\t\t\t<li>\n\t\t\t\t<p>Access to CESNET storage facilities provided by the project “e-INFRA CZ” under the programme “Projects of Large Research, Development, and Innovations Infrastructures” (LM2023054), is greatly appreciated.</p>\n\t\t\t</li>'
