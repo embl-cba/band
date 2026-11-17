@@ -22,7 +22,7 @@
       creates: /tmp/munge-{{ munge_version }}/configure
 
   - name: build munge
-    shell: ./configure --prefix={{ munge_dir }} --with-crypto-lib=openssl && make
+    shell: ./configure --prefix={{ munge_dir }} --with-crypto-lib=openssl && make -j{{ ansible_processor_vcpus | default(2) }}
     args:
       chdir: /tmp/munge-{{ munge_version }}
       creates: /tmp/munge-{{ munge_version }}/src/munged/munged

@@ -39,7 +39,7 @@
     become: yes
 
   - name: build slurm
-    shell: ./configure --prefix={{ slurm_dir }} --with-munge={{ munge_dir }} && make
+    shell: ./configure --prefix={{ slurm_dir }} --with-munge={{ munge_dir }} && make -j{{ ansible_processor_vcpus | default(2) }}
     args:
       chdir: /tmp/slurm-{{ slurm_version }}
       creates: /tmp/slurm-{{ slurm_version }}/src/srun/srun

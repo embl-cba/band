@@ -11,6 +11,17 @@
   roles:
   - { role: portal_ca_trust }
 
+# the portal makes each desktop's VNC password on the login node
+# (eosc.json startServer: vncpasswd -f > ~/.vnc/passwd); without vncpasswd
+# the file stays empty and Xvnc refuses Guacamole ("No password configured")
+- hosts: 'LoginNodes'
+  become: yes
+  tasks:
+  - name: vncpasswd for the portal
+    dnf:
+      name: tigervnc-server-minimal
+      state: present
+
 
 - hosts: 'PortalNodes'
   user: ubuntu

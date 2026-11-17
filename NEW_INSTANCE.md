@@ -1,67 +1,72 @@
-# BAND on de.NBI Tübingen (tubi)
+# BAND on CESNET (e-INFRA CZ OpenStack, Brno)
 
-The VMs already exist (no Heat). Inventory, `/etc/hosts` and `slurm.conf` are
-maintained by hand.
+Branch `cesnet`: the Euro-BioImaging service at https://band.vm.fedcloud.eu.
+The VMs already exist (no Heat); inventory, `/etc/hosts` and `slurm.conf` are
+maintained by hand. The de.NBI Tübingen instance is on branch `tubi`.
 
 ## Site values (not in git)
 
-Everything specific to this site lives in two files that git ignores:
+Everything specific to this site lives in files that git ignores:
 
 | File | Holds | Template in git |
 |---|---|---|
-| `group_vars/all/site.yml` | host addresses (`site_hosts`, used by `inventory_tubi`), domain, portal host name, LDAP host, address and certificate fingerprint, Keycloak realm URL and client ids, reverse proxy address | `site.example.yml` |
-| `files/etcHosts` | `/etc/hosts` for all nodes, incl. the LDAP server and `nfs-server` | `files/etcHosts.example` |
+| `group_vars/all/site.yml` | host addresses (`site_hosts`, used by `inventory_cesnet`), domain, portal host name, LDAP host, address and certificate fingerprint, Keycloak realm URL and client ids, NFS address, NVIDIA driver, `portal_tls`, `portal_banner`, `slurmdbd_restore_dump` | `site.example.yml` |
+| `files/etcHosts` | `/etc/hosts` for the cluster, incl. the LDAP server and the portal | `files/etcHosts.example` |
+| `files/ldap-ca-<site_ldap_host>.crt` | the CA of the LDAP server's certificate (sssd checks it) | made by `ldapserver.yml` |
+| `files/ssh_host_keys/<host>/` | SSH host keys saved before a rebuild (private keys vault-encrypted) | — |
 
-Ansible loads `group_vars/all/site.yml` by itself (it sits next to the
-inventory and the playbooks). If it is missing, runs stop with
-"'site_hosts' is undefined". The SMTP user, the welcome-mail sender and the
-other secrets are in the vaulted `vars/passwords.yml` (see Secrets).
+Ansible loads `group_vars/all/site.yml` by itself. If it is missing, runs stop
+with "'site_hosts' is undefined". Secrets are in the vault (see Secrets).
 
-| Host | IP | OS | Role |
+| Host | Address | OS | Role |
 |---|---|---|---|
-| mgmt-0 | private | Rocky 9 | slurmctld, slurmdbd, MariaDB |
-| login-0 | private | Rocky 9 | login, VNC |
-| node-1 … node-8 | private | Rocky 9 | desktop nodes, 1× Tesla V100-SXM2-32GB each |
-| band-portal | private | Ubuntu 24.04 | portal: nginx (web front end band-portal-web), Tomcat (client, Guacamole), eosc-rs, guacd, MongoDB; behind the reverse proxy |
-| band-auth | private | Ubuntu 24.04 | Keycloak 26 (realm `eosc`) and PostgreSQL in docker; behind the reverse proxy |
-| band-auth-old | private | Ubuntu 20.04 | the former Keycloak 4.5 VM: no Keycloak running, keeps its backups; no playbook targets it |
+| mgmt-0 | private | Rocky 9 | slurmctld, slurmdbd, MariaDB (16 GB RAM) |
+| login-0 | private | Rocky 9 | login (users' ssh, X11 forwarding), Slurm client |
+| node-1 | private | Rocky 9 | desktop node, 2× GeForce RTX 2080 (8 GB) |
+| node-2 … node-5 | private | Rocky 9 | desktop nodes, 2× Tesla T4 (16 GB) each |
+| band-portal | private + floating IP | Ubuntu 24.04 | portal: nginx (TLS, web front end band-portal-web), Tomcat (client, Guacamole), eosc-rs, guacd, MongoDB |
+| band-auth | private + floating IP | Ubuntu 24.04 | Keycloak 26 (realm `eosc`) and PostgreSQL in docker, nginx (TLS) |
+| ldap | private | Rocky 9 | OpenLDAP (`ldaps://<site_ldap_host>`), `ldapserver.yml` |
 
-Addresses are in `inventory_tubi` / `files/etcHosts`.
+Each desktop node: 24 CPUs, 56 GB RAM (`RealMemory=57344`), 80 GB root disk,
+an empty 80 GB disk on `/mnt`. There is **no reverse proxy**: the portal and
+Keycloak each have their own public (floating) IP and end TLS themselves.
 
-External services: NFS server `nfs-server` (its IPv6 address is in
-`files/etcHosts`). autofs mounts its exports `/mnt/vd_shares` on `/nfs`,
-`/scratch` (5.9 TB) on `/scratch` and `/vd-containers` (container images used
-by the desktop launchers) on `/vd-containers`.
-LDAP `ldaps://<site_ldap_host>` (no DNS record; its address is in
-`files/etcHosts`).
+NFS server (IPv4, not managed here): autofs mounts its `/srv/nfs` on `/nfs`
+(NFSv4; `home`, `scratch`, `local`, `containers` and `modulefiles` below it are
+separate exports the client crosses into). `/home`, `/scratch` and
+`/usr/local/sbin` are links into `/nfs`. Keycloak's nightly backup goes to the
+same server (`keycloak_backup_nfs`).
 
 ## Ansible
 
-Use the Ansible 9 venv (ansible-core 2.16), not the system `ansible-playbook`
-(the playbooks are tested with 2.16):
+Use the Ansible 9 venv (ansible-core 2.16), not the system `ansible-playbook`:
 
-    cd /home/ubuntu/create-band-tubi
+    cd ~/band
     ~/ansible216/bin/ansible-playbook <playbook>.yml
 
-`ansible.cfg` sets the inventory (`inventory_tubi`) and the vault password
-file, so neither `-i` nor `--ask-vault-pass` is needed when you run from the
-repo directory.
+`ansible.cfg` sets the inventory (`inventory_cesnet`) and the vault password
+file, so neither `-i` nor `--ask-vault-pass` is needed from the repo directory.
 
 `--limit` takes host names, groups or regexes: `node-2,node-3`,
-`'DesktopNodes:!node-1'` or `'~node-[2-8]'`. `node-[2:8]` does **not** work
-(it means "items 2–8 of a group called node-").
+`'DesktopNodes:!node-4'` or `'~node-[2-5]'`. `node-[2:5]` does **not** work.
+
+Before a run against live hosts: `--check` (and `--diff` where no secret is
+templated). On hosts that aren't set up yet, `--check` stops where a task needs
+something an earlier task would have installed; the roles guard the common
+cases (VirtualGL's EGL test, firewalld, gdm, the portal's MongoDB ping).
 
 ## Secrets (ansible-vault)
 
-The vault password is in `~/.ansible/vault_pass_tubi` (mode 600, **not** in
-the repo). Keep a copy somewhere safe: without it the secrets below can't be
+The vault password is in `~/.ansible/vault_pass_cesnet` (mode 600, **not** in
+the repo). Keep a copy somewhere safe: without it the secrets can't be
 decrypted. Encrypted:
 
 - whole files: `vars/passwords.yml`, `files/slurmdbd.conf`, `files/server_ca`
-  (the SSH CA private key). `copy` decrypts them on the way to the host.
+  (the SSH CA private key), and the saved host keys in `files/ssh_host_keys/`
+  (not in git). `copy` decrypts them on the way to the host.
 - single values (`!vault`): `ldapBindDNPassword`, `ldapManagerPassword` in
-  `vars/ldapConfig.yml` and `roles/eosc_ldapserver/vars/main.yml`
-  (plus `testPassword`), `ca_pass_prase` in `vars/eosc-portal.yml`, the OIDC
+  `vars/ldapConfig.yml`, `ca_pass_prase` in `vars/eosc-portal.yml`, the OIDC
   client secrets in `roles/eosc_vd_portal/vars/main.yml`, `keycloak_db_password`
   and `keycloak_admin_password` in `roles/keycloak/vars/main.yml`.
 
@@ -71,89 +76,77 @@ Edit or read them with:
     ~/ansible216/bin/ansible-vault view files/slurmdbd.conf
     echo -n 'new-secret' | ~/ansible216/bin/ansible-vault encrypt_string --stdin-name some_var
 
-A single `!vault` value is read through Ansible:
+Never commit a decrypted copy, and never print a secret into a log: mask
+`--diff` output of templates that hold one, and pass passwords to commands on
+stdin under `no_log` (as the playbooks do).
 
-    ~/ansible216/bin/ansible localhost -m debug -a var=ca_pass_prase -e @vars/eosc-portal.yml
-
-Never commit a decrypted copy.
-
-**Working from another machine:** clone the repo, then copy the vault password
-file over a safe channel (scp, password manager; never git) to
-`~/.ansible/vault_pass_tubi` with mode 600.
-
-**New instance, new vault password:** whole files are re-encrypted with
-`rekey`; `!vault` values are not (rekey only works on files), so encrypt each
-again with `encrypt_string` and replace the old block. A new site should get
-new values anyway (munge key, DB passwords, root hash, portal CA).
-
-    openssl rand -base64 32 > ~/.ansible/vault_pass_newsite; chmod 600 ~/.ansible/vault_pass_newsite
-    ~/ansible216/bin/ansible-vault rekey --vault-password-file ~/.ansible/vault_pass_tubi \
-        --new-vault-password-file ~/.ansible/vault_pass_newsite \
-        vars/passwords.yml files/slurmdbd.conf files/server_ca
-
-and point `vault_password_file` in `ansible.cfg` at the new file.
+**Working from another machine:** clone the repo, copy the vault password file
+over a safe channel (never git) to `~/.ansible/vault_pass_cesnet` with mode 600,
+and copy the files listed under Site values.
 
 ## Portal SSH CA
 
 eosc-rs signs a short-lived ssh certificate for each portal login (principal =
-user name) and logs in to login-0 with it; the nodes trust the CA through
+user name, RSA/SHA-512, which Rocky 9's DEFAULT crypto policy accepts) and logs
+in to login-0 with it; the cluster trusts the CA through
 `/etc/ssh/sshd_config.d/40-band-portal-ca.conf` (role `portal_ca_trust`). The
-CA is the only key made by hand. The HTTPS certificate belongs to the reverse
-proxy (certbot there, not Ansible); ssh host keys and the per-user
-certificates are made automatically.
-
-For a new instance, before the first `portal.yml` run:
+CA is the only key made by hand. For a new instance, before the first
+`portal.yml` run:
 
     openssl rand -base64 24        # the CA passphrase; keep it in a password manager
     ssh-keygen -t rsa -b 4096 -m PEM -f files/server_ca -C band-portal-ca-<site>-<date>
     ~/ansible216/bin/ansible-vault encrypt files/server_ca
     echo -n '<passphrase>' | ~/ansible216/bin/ansible-vault encrypt_string --stdin-name ca_pass_prase
-    # paste the output into vars/eosc-portal.yml in place of the old ca_pass_prase
 
-- `-m PEM`: the resource server reads only PEM private keys.
-- `-C` without spaces: the resource server can't parse a `.pub` whose comment
-  has spaces.
-- `files/server_ca.pub` stays plain text in git.
-- `portal.yml` then installs the CA on the portal and the trust on
-  LoginNodes and DesktopNodes in the same run.
-- The certificates are signed with RSA/SHA-512 (`resource-server-0.0.4-sha512.jar`,
-  built with `roles/eosc_vd_portal/files/patches/resource-server-sha512.patch`);
-  Rocky 9 refuses the SHA-1 signatures of the unpatched jar.
+`-m PEM`: the resource server reads only PEM keys. `-C` without spaces: it
+can't parse a `.pub` whose comment has spaces. `files/server_ca.pub` stays
+plain text in git.
+
+## TLS and the public names
+
+`portal_tls: local` and `keycloak_tls: local` (in `site.yml`): nginx on
+band-portal and on band-auth ends TLS with a Let's Encrypt certificate in
+`/etc/letsencrypt` on that VM; certbot's timer renews it through a webroot
+that nginx serves on port 80 (`roles/eosc_vd_portal/tasks/tls_local.yml`,
+`roles/keycloak/tasks/tls_local.yml`). The role stops if the certificate is
+missing. Moving to a new VM: copy `/etc/letsencrypt` from the old one (account
+and renewal settings included). New name: point it at the VM, then
+`certbot certonly --standalone -d <name>` with nginx stopped. With
+`portal_tls: local`, Tomcat (8080) and eosc-rs (9001) listen on 127.0.0.1 only.
+
+The names stay; the floating IPs move. To switch to new portal and Keycloak
+VMs, move **both** floating IPs together (the portal checks tokens against the
+Keycloak its `/etc/hosts` points to). Rollback: move them back.
 
 ## Keycloak (band-auth)
 
 `keycloak.yml` (role `keycloak`) runs Keycloak 26 and PostgreSQL in docker on
-`AuthNodes`, behind the reverse proxy
-(`files/reverse-proxy-auth.conf.example`). The public URL stays
-`https://<auth host>/auth`, so the issuer, the portal's client settings and
-the redirect URIs registered at Google and LS AAI don't change.
+`AuthNodes`. The public URL stays `https://<auth host>/auth`, so the issuer,
+the portal's client settings and the redirect URIs registered at Google and
+LS AAI don't change.
 
-- The image is built on the VM: the registration step from
+- The image is built on the VM with the registration step from
   [band-keycloak-flow-extension](https://github.com/embl-cba/band-keycloak-flow-extension)
   and the login theme from
-  [band-keycloak-theme](https://github.com/embl-cba/band-keycloak-theme),
-  each a pinned tag with its sha256 (`roles/keycloak/defaults/main.yml`), and
-  the LDAP server's certificate, fetched at deploy time and used only with the
-  fingerprint `site_ldap_cert_sha256`.
+  [band-keycloak-theme](https://github.com/embl-cba/band-keycloak-theme)
+  (cesnet: `keycloak_theme_version: v1.0.0-cesnet`, with the CESNET logo),
+  each a pinned tag with its sha256, and the LDAP server's certificate,
+  fetched at deploy time and used only with the fingerprint
+  `site_ldap_cert_sha256`.
 - Data: PostgreSQL in `/opt/keycloak/postgres`; both containers restart
-  unless stopped. Secrets (`roles/keycloak/vars/main.yml`: DB password, the
-  master realm's `admin` password) reach them through root-only env files in
+  unless stopped. Secrets reach them through root-only env files in
   `/opt/keycloak`. The `admin` password only takes effect on the very first
   start; later change it in the admin console.
 - Realm: imported once from the old Keycloak's export, adapted by
-  `roles/keycloak/files/prepare-realm.py` (see its header):
+  `roles/keycloak/files/prepare-realm.py`:
 
       ansible-playbook keycloak.yml --tags keycloak_import \
           -e keycloak_import_file=/path/eosc-realm.json [-e keycloak_import_override=true]
 
   The export holds users, keys and client secrets: keep it out of git.
-- Backup: `keycloak-backup.timer` runs `/usr/local/sbin/keycloak-backup`
-  every night at 00:00 Europe/Berlin (catches up after downtime): a `pg_dump`
-  of the database to `/opt/keycloak/backups/keycloak-<date>-<time>.dump`
-  (root only), kept 14 days, and a copy on the NFS share in
-  `/nfs/backups/keycloak/` (`keycloak_backup_nfs`; the share is mounted only
-  for the copy, and only that folder). Keycloak keeps running. Restore (same
-  Keycloak version), on band-auth or a new VM after `keycloak.yml`:
+- Backup: `keycloak-backup.timer` makes a nightly `pg_dump` to
+  `/opt/keycloak/backups/` (root only, kept 14 days) and copies it to the NFS
+  server. Restore (same Keycloak version):
 
       sudo docker stop keycloak
       sudo docker exec keycloak-postgres psql -U keycloak -d postgres \
@@ -162,174 +155,145 @@ the redirect URIs registered at Google and LS AAI don't change.
           --no-owner < /opt/keycloak/backups/keycloak-<date>-<time>.dump
       sudo docker start keycloak
 
-  Container logs rotate at 10 MB x 3.
-- Realm export (for another Keycloak version, or a portable copy): export
-  the realm from the running Keycloak on
-  band-auth (it keeps running) into a folder only root and the container's
-  user (1000) can read; `--add-host` with `site_ldap_host`/`site_ldap_address`,
-  else the LDAP users can't be validated during the export:
-
-      sudo install -d -o 1000 -m 700 /root/kc-export
-      sudo docker run --rm --network keycloak --env-file /opt/keycloak/keycloak.env \
-          --add-host <site_ldap_host>:<site_ldap_address> -v /root/kc-export:/out \
-          band-keycloak:26.8.1 export --optimized --realm eosc --users same_file \
-          --file /out/eosc-realm.json
-
-  then import it on the new VM as above (prepare-realm.py leaves an
-  already-adapted export as it is). The users include Keycloak's own
-  service accounts (`service-account-*`).
-
-Keycloak 26 vs. the old 4.5, things that bit during the move (all handled by
-`prepare-realm.py` / the extension):
-- a client may introspect only tokens it is an audience of; eosc-rs (client
-  `resource`) also wants `eosc-client` in `aud`: two audience mappers on
-  `eosc-client`;
-- an ALTERNATIVE step's challenge is shown instead of trying the next step:
-  extension 2.0.1 passes an existing user on to `idp-auto-link`;
-- JavaScript authorization policies are gone; LS AAI's old CAS endpoints no
-  longer know the client (now `https://login.aai.lifescience-ri.eu/oidc/`);
-- changing an identity provider's token URL needs its client secret again.
-
 Docker on these VMs needs `dns` and `mtu` in `/etc/docker/daemon.json` (the
-role sets them): the subnet's IPv4 DNS servers don't answer containers, and
-the network's MTU is 1450.
+role sets them).
 
 ## Hand-maintained files
 
 | File | What |
 |---|---|
-| `inventory_tubi` | hosts, IPs, groups |
-| `files/etcHosts` | installed as `/etc/hosts` on all nodes |
-| `files/slurm.conf` | nodes `node-[1-8]`, `Gres=gpu:1`, partitions `batch` and `rocky` |
-| `files/slurmdbd.conf` | installed mode 600; vaulted (`ansible-vault edit`) |
-| `vars/*.yml` | domain, LDAP, Slurm settings, passwords |
+| `inventory_cesnet` | hosts and groups (addresses from `site_hosts`) |
+| `files/etcHosts` | installed as `/etc/hosts` on the cluster |
+| `files/slurm.conf` | `ClusterName=mbp`, nodes `node-[1-5]` with `Gres=gpu:2`, `RealMemory=57344`, partitions `batch` and `rocky`, `FirstJobId=10000` |
+| `files/slurmdbd.conf` | installed mode 600; vaulted |
+| `vars/slurm.yml` | Slurm 25.11.4, munge 0.5.18, NHC 1.5, MariaDB settings |
+| `vars/eosc-portal.yml` | portal settings and the cesnet changes to the web front end |
+| `roles/customize_desktop/vars/main.yml` | the desktop launchers (one entry per app) |
 
-`attic/make_files/make_files.yml` would regenerate `etcHosts` and `slurm.conf`
-from templates and overwrite the hand-made versions. Don't run it.
+## Rebuilding the cluster (as done in November 2026)
+
+All 7 cluster VMs were rebuilt with a clean Rocky 9 in one window, as a new
+instance with the new portal, Keycloak and LDAP. In that order:
+
+1. **Save what the repo can't recreate.** Nothing on the cluster's local disks
+   is user data (homes, containers, modulefiles are on NFS), except:
+   - login-0's SSH host keys, so users' `known_hosts` stay valid:
+     `ansible login-0 -b -m fetch -a 'src=/etc/ssh/ssh_host_<type>_key dest=files/ssh_host_keys/login-0/ flat=yes'`
+     for each key and `.pub`, then `ansible-vault encrypt files/ssh_host_keys/login-0/*_key`.
+     `0_base.yml` puts them back.
+   - the Slurm accounting database: on mgmt-0, a `mysqldump --single-transaction
+     --databases slurm_acct_db | gzip` (root's MariaDB password through a
+     temporary root-only option file, never on the command line), copied to
+     the ansible host, outside the repo. Take the final dump when no node can
+     run jobs any more, just before mgmt-0 goes.
+2. **Rebuild** with `openstack server rebuild --image rockylinux-9-x86_64`
+   (the undated image is the newest; check the release after boot). The IP
+   stays, the disk is wiped.
+3. **Check each new host key** against the fingerprints cloud-init prints in
+   `openstack console log show <host>`, then replace the entry in
+   `~/.ssh/known_hosts`.
+4. **Update everything once**: `dnf upgrade` and one reboot on all hosts,
+   before step 2, so the NVIDIA module is built for the final kernel.
+5. **Run the playbooks** 0–7 (below). GPU steps first on one node of each GPU
+   type (node-1 and node-2), with `-e nvidia_allow_reboot=true`
+   (`site.yml` keeps it `false` for live nodes). For the job history, set
+   `slurmdbd_restore_dump` before step 5 (see there).
+6. **Portal**: `portal.yml`; then move the floating IPs (see TLS).
 
 ## Deploy order
 
-`cluster_installation.yml` runs steps 0-7 in order (`import_playbook`). Each
-step is also its own playbook, so a step can be rerun alone. All of them target
-only `ManagementNodes:LoginNodes:DesktopNodes`, never band-portal.
+`cluster_installation.yml` runs steps 0-7 in order. Each step is also its own
+playbook, so a step can be rerun alone. They target only
+`ManagementNodes:LoginNodes:DesktopNodes` (step 1 also `LdapNodes`).
 
-0. `0_base.yml`: `/etc/hosts`, short host name (persistent; cloud-init is told
-   to keep it), root password, time sync, sshd password-login settings. Logging is left as Rocky 9 ships it.
-1. `1_disable_selinux.yml`: reboots every node it changes.
-2. `2_installgpu_rocky9.yml`: NVIDIA 580 driver (proprietary module, DKMS) on
-   DesktopNodes. Reboots each node once.
-3. `3_ldapclient.yml`: sssd against `ldaps://<site_ldap_host>`.
-4. `4_nfs_installation.yml`: autofs mounts `/nfs`, `/scratch` and
-   `/vd-containers`; `rocky`'s home moves to `/local_home`, then `/home` and
-   `/usr/local/sbin` are linked into `/nfs`.
-5. `5_slurm_installation.yml`: hosts file, MariaDB, slurmdbd and slurmctld on
-   mgmt-0, slurmd on node-1..8, client on login-0; munge + Slurm 25.11.4 built
-   from source. Users need a Slurm account (`AccountingStorageEnforce=limits`).
-6. `6_provision_account.yml`: installs `/usr/local/sbin/provision_account.py`
-   (on the share, root-only) and a 3-minute cron job on login-0. It makes a
-   home directory and a Slurm user in account `default` for every LDAP user;
-   `--dry-run` shows what it would do. Newly provisioned users get a welcome
-   mail (`provision_send_email: True` in the playbook; SMTP settings in
-   `vars/passwords.yml`).
-7. `7_desktop.yml`: what users get in their desktop, on the desktop nodes
-   (Lmod also on login-0). No reboots; one part alone with `--tags`:
-   - `vgl`: VirtualGL, EGL back end, for GPU-rendered OpenGL in VNC desktops
-     (`vglrun <app>`).
-   - `lmod`: Lmod on login and desktop nodes.
-   - `vnc`: TigerVNC with the GNOME flashback/metacity session. Keeps plymouth
-     out of the initramfs (`/boot` is small) and turns off firewalld, which
-     the GUI group installs enabled.
-   - `s3`: s3fs-fuse and the "Mount S3 Buckets" GUI. `slurm.epilog` unmounts a
-     user's `fuse.s3fs` mounts (matched by the mount's `user_id`, nothing
-     else), removes the empty mount point, deletes `~/.passwd-s3fs` once the
-     user has no job left anywhere, and cleans their X/pulse files in `/tmp`
-     once they have no job left on the node.
-   - `apps`: apptainer (provides the `singularity` the launchers call), Java 21
-     (nextflow), firefox, tools; dconf settings (no screensaver, logout, lock
-     screen or sleep; background); the "Data Access" and "Image Analysis" menus
-     and the launchers (`roles/customize_desktop`:
-     `templates/<app>.desktop.j2`, the icon in `files/`, both listed in
-     `vars/main.yml`). The apps are containers on the share `/vd-containers`; a
-     new app needs its container there and a launcher in the role. Tools that
-     aren't containers live in `/nfs/local/bin` and are linked into
-     `/usr/local/bin`: rclone (role `rclone`, plus `rclone-gui`) and nextflow
-     (role `nextflow`), both pinned with sha256 and reinstalled if missing.
-     Container recipes: `files/container-recipes/` (TissUUmaps) and
-     `/vd-containers/container-recipes/`.
+0. `0_base.yml`: `/etc/hosts`, short host name (cloud-init is told to keep
+   it), root password (console only), chrony, crypto policy DEFAULT, sshd
+   drop-in `/etc/ssh/sshd_config.d/01-band.conf` (keys only, no root login,
+   X11 forwarding only on LoginNodes; checked with `sshd -t`, then reloaded),
+   and saved host keys from `files/ssh_host_keys/<host>/`.
+1. `1_disable_selinux.yml`: SELinux off on the desktop nodes and the LDAP
+   server (reboots and waits). mgmt-0 and login-0 keep it enforcing.
+2. `2_installgpu_rocky9.yml`: NVIDIA driver (`nvidia_driver_version`,
+   620.70.06, open kernel modules for these Turing GPUs) from the runfile with
+   DKMS; nouveau blocked in modprobe, initramfs and kernel command line. It
+   stops instead of rebooting unless `nvidia_allow_reboot` is true, checks
+   `/boot` has 300 MB free before dracut, reboots after a new driver (the GPUs
+   only work after that) and fails if `nvidia-smi` lists no GPU.
+3. `3_ldapclient.yml`: sssd against `ldaps://<site_ldap_host>`, verifying the
+   server certificate with `files/ldap-ca-<host>.crt`.
+4. `4_nfs_installation.yml`: autofs mounts `/nfs`; `rocky`'s home moves to
+   `/local_home`, then `/home`, `/scratch` and `/usr/local/sbin` become links
+   into `/nfs`. Where SELinux is on, `use_nfs_home_dirs` (else sshd can't read
+   `~/.ssh/authorized_keys`).
+5. `5_slurm_installation.yml`: MariaDB (InnoDB settings for slurmdbd, 4 GB
+   buffer pool) and slurmdbd on mgmt-0, munge 0.5.18 and Slurm 25.11.4 built
+   from source (`make -j`), NHC 1.5, slurmctld, slurmd on the nodes, client on
+   login-0. With `slurmdbd_restore_dump` set, the dump is loaded into the
+   empty `slurm_acct_db` before slurmdbd's first start (never over existing
+   tables; slurmdbd converts them if Slurm is newer). Keep `ClusterName` and
+   set `FirstJobId` above the old job ids. Users need a Slurm account
+   (`AccountingStorageEnforce=limits`); root can't run jobs (`DisableRootJobs`).
+6. `6_provision_account.yml`: `/usr/local/sbin/provision_account.py` and a
+   3-minute cron job on login-0: a home directory and a Slurm user in account
+   `default` for every LDAP user, and a welcome mail.
+7. `7_desktop.yml`, one part alone with `--tags`:
+   - `vgl`: VirtualGL 3.1.5 with the EGL back end. A udev rule opens the
+     GPUs' DRI devices; `/usr/local/bin/vgl-display` picks the card of the
+     job's GPU (`SLURM_JOB_GPUS`) for `VGL_DISPLAY`. The role checks every GPU
+     has a DRI card and renders with EGL.
+   - `lmod`: Lmod with `MODULEPATH=/nfs/modulefiles` (login and desktop nodes).
+   - `vnc`: TigerVNC 1.15 with the GNOME flashback/metacity session; Xvnc
+     listens on localhost only (the portal reaches it through an ssh tunnel);
+     no gdm, text boot target, firewalld off.
+   - `s3`: s3fs-fuse and the "Mount S3 Buckets" GUI; `slurm.epilog` unmounts
+     a user's buckets when their last job on the node ends.
+   - `apps`: apptainer, Java, firefox, tools; rclone and nextflow on the share
+     (`/nfs/local/bin`); dconf settings; the menus and launchers. The apps are
+     containers in `/nfs/containers`; a new app needs its container there and
+     an entry in `desktop_launchers`.
 
 Not part of the full run:
-- Keycloak: `keycloak.yml` on band-auth (see Keycloak).
-- Portal: `portal.yml` (band-portal, and the CA trust on login-0 and the
-  desktop nodes). No binary is in git: the portal downloads each one itself,
-  checked against the sha256 in `roles/eosc_vd_portal/vars/main.yml` —
-  Tomcat and `guacamole.war` from archive.apache.org, gson from Maven Central,
-  the front end and the Guacamole extension from their own repositories'
-  releases, and what we built here (`client.war`, the resource server jar)
-  and the old front end from this repository's release
-  `portal-artifacts-tubi-20261030`. The reverse proxy config is
-  `files/reverse-proxy.conf.example`. The web front end is
-  [band-portal-web](https://github.com/embl-cba/band-portal-web) (Vue): the role
-  installs the release `band_portal_web_version` (sha256 checked) and nginx
-  serves `/var/www/html/portal`, a link to it. The old AngularJS front end
-  (eosc-js) stays installed; switch back with
-  `ansible-playbook portal.yml --tags portal_web -e portal_frontend=eosc-js`.
-  A new front end version: release it in that repo, then set
-  `band_portal_web_version` and `band_portal_web_sha256`.
-  Guacamole gets its connection from the portal through
-  [band-guacamole-extension](https://github.com/embl-cba/band-guacamole-extension):
-  the role downloads the release jar `band_guac_ext_version` (sha256
-  `band_guac_ext_sha256`) into `/etc/guacamole/extensions` and gson into
-  `/etc/guacamole/lib`. `/guacamole/` has no login of its own, so the
-  extension only accepts VNC to the portal's own tunnels and SSH/SFTP to the
-  hosts in `band-ssh-hosts` (`guacamole.properties`), which the role fills
-  with the `DesktopNodes` addresses; a desktop node that is missing there
-  can't be reached from the portal. Refused cookies are logged in Tomcat's
-  journal (`journalctl -u tomcat | grep Refused`).
-- `ldapserver.yml` (the LDAP server itself). Its `ldapserver` group is not in
-  `inventory_tubi`; add one before using it.
-- The pre-split all-in-one playbook is kept as `attic/cluster_installation.old.yml`.
+- `keycloak.yml` (band-auth), `ldapserver.yml` (LdapNodes).
+- `portal.yml`: the portal on band-portal, the CA trust on login-0 and the
+  desktop nodes, and `vncpasswd` on login-0 (the portal makes each desktop's
+  VNC password there). Desktops start with `-SecurityTypes VncAuth`; the
+  Guacamole extension passes the password. No binary is in git: the role
+  downloads each one, checked against the sha256 in
+  `roles/eosc_vd_portal/vars/main.yml`. The front end is a release of
+  [band-portal-web](https://github.com/embl-cba/band-portal-web); its pages
+  are compiled in, so cesnet changes them on install (`--tags portal_web`):
+  `portal_banner` (the red banner; `site.yml`), `portal_web_files` (the
+  CESNET logos) and `portal_web_replacements` (header and acknowledgement
+  logos, Resources and Status pages) in `vars/eosc-portal.yml`. Undoing a
+  replacement needs the release unpacked again (delete
+  `/var/www/html/band-portal-web-<version>` and rerun).
 
 ## Gotchas
 
-- **After a reboot a node stays DOWN** ("Node unexpectedly rebooted",
-  `ReturnToService=1`, no `RebootProgram`). Put it back with
-  `scontrol update nodename=node-[1-8] state=resume` on login-0 or mgmt-0.
-  Reboot mgmt-0 first if rebooting everything.
-- **No firewall on the nodes.** The OpenStack security groups do that job.
-  firewalld (pulled in by "Server with GUI") blocks slurmd's port 6818 and
-  srun's ports: the node shows `idle*`/`down*` and jobs never start.
-  `7_desktop.yml` (tag `vnc`) disables it.
-- **cloud-init resets the host name** to the OpenStack FQDN (`node-1.<domain>`) on every boot
-  unless `/etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg` says
-  `preserve_hostname: true`; `0_base.yml` installs that.
+- **After a reboot a node stays DOWN** ("Node unexpectedly rebooted"). Put it
+  back with `scontrol update nodename=<node> state=resume`.
+- **Out of service:** `scontrol update nodename=<node> state=drain reason="..."`,
+  and run the playbooks with `--limit '!<node>'` until it's back.
+- **A GPU "lost from the bus"** (`lspci` shows `rev ff`, `NV_ERR_GPU_IS_LOST`
+  in the kernel log) is the passed-through card or the hypervisor, not the
+  driver. A reboot inside the VM doesn't help; try `openstack server stop`
+  and `start`, else ask CESNET (node-4, November 2026).
+- **The NVIDIA installer loads its module before the firmware is in place**:
+  until the next boot, `nvidia-smi` says "No devices were found" (with exit
+  code 0) and nvidia-drm logs "Failed to allocate NvKmsKapiDevice".
+- **No firewall on the nodes**; the OpenStack security groups do that job.
+  firewalld blocks slurmd (6818) and srun's ports.
+- **cloud-init resets the host name** unless
+  `/etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg` says
+  `preserve_hostname: true` (`0_base.yml`).
+- **A fresh host's first Slurm run**: the `slurm` user must exist before
+  `slurmdbd.conf` is given to it (`slurmdb-config` creates it).
+- **NHC 1.5** ships a `.tar.gz` (`nhc_tarball`) with a ready `nhc` script;
+  the build keys on the `Makefile`.
+- Ubuntu's `apt-daily` can hang for days on these VMs and hold the apt lock;
+  stop it before a `portal.yml` or `keycloak.yml` run if apt is locked.
+- Testing jobs as root fails (`DisableRootJobs`); use a user with a Slurm
+  account, and remove a test account afterwards.
 
-- **nouveau must never load on the V100 nodes.** It crashes probing the GPU,
-  after which `nvidia-smi` hangs, and on one node it caused a kernel panic at
-  boot. `rocky9gpu` blocks it in `/etc/modprobe.d`, in the initramfs
-  (`/etc/dracut.conf.d/omit-nouveau.conf`) and on the kernel command line. A
-  node that panics needs `rd.driver.blacklist=nouveau modprobe.blacklist=nouveau`
-  added once at the GRUB prompt from the OpenStack console, then a run of the role.
-- **`/boot` is only ~936 MB.** The NVIDIA driver is kept out of the initramfs
-  (it adds ~260 MB) and `rocky9gpu` checks every kernel's initramfs after a
-  rebuild. Don't remove those settings.
-- Check GPU state with `modinfo -F version nvidia` and `lsmod | grep nouveau`.
-  Only run `nvidia-smi` with a timeout. `lspci` isn't installed; use
-  `/sys/bus/pci/devices/*/vendor`.
-- The NFS server only exports to the cluster's IPv6 range; mounting its IPv4
-  address is denied, so `automount` mounts it over
-  IPv6 (`proto=tcp6`). The share's `home/` holds existing users' homes and its
-  `slurmstate1/` belongs to an older cluster, so the Slurm state stays local on
-  mgmt-0 (`usesharedstatedir=False`).
-- Nodes: `RealMemory=82000` (slurmd -C reports 84955), `DefMemPerCPU=10000`.
-  Job mail goes through s-nail on mgmt-0 (`/etc/s-nail.rc`, SMTP settings from
-  `vars/passwords.yml`); users need `--mail-user=<address>`, since Slurm user
-  names are not mail addresses.
-- NHC (cron every 5 min) uses the short host name (`HOSTNAME` in
-  `/etc/sysconfig/nhc`); its stock sshd check never matched on Rocky 9 and was
-  fixed to `-m "sshd:"`. Without both fixes it would drain every node.
-- Slurm 25.11: slurmctld must run as `SlurmUser` (`User=slurm` in its unit),
-  slurmd needs `Delegate=yes` for cgroup v2, munge 0.5.18 needs
-  `<munge_dir>/var/run/munge` to exist.
-
-The previous version of this file (from the copied instance) is in
-`attic/NEW_INSTANCE.old.md`.
+The previous versions of this file are `attic/NEW_INSTANCE.old.md` and the
+Tübingen one on branch `tubi`.

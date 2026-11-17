@@ -39,3 +39,13 @@ portal_web_replacements:
   - name: desktop RAM limit on the Resources page
     regexp: '&lt;=80G RAM'
     replace: '&lt;=40G RAM'
+  # Status page: the cesnet cluster has 5 nodes (the release lists 8).
+  # Node 4 is out of service (a GPU lost from the PCI bus, 2026-11-16).
+  - name: nodes on the Status page
+    regexp: '(?s)<p><i class="bi bi-emoji-smile status-ok"></i>Node 1 is healthy\. </p>.*?Node 8 is healthy\. </p>'
+    replace: '<p><i class="bi bi-emoji-smile status-ok"></i>Node 1 is healthy. </p>\n<p><i class="bi bi-emoji-smile status-ok"></i>Node 2 is healthy. </p>\n<p><i class="bi bi-emoji-smile status-ok"></i>Node 3 is healthy. </p>\n<p><i class="bi bi-tools status-ok" style="color:#f9b233"></i>Node 4 is under maintenance (out of service). </p>\n<p><i class="bi bi-emoji-smile status-ok"></i>Node 5 is healthy. </p>'
+  # while the new instance is being finished; to undo, remove this entry and
+  # reinstall the front end (delete /var/www/html/band-portal-web-<version>)
+  - name: maintenance on the Status page
+    regexp: '<p><i class="bi bi-emoji-smile status-ok"></i>There''s currently no system downtime planned\. </p>'
+    replace: '<p><i class="bi bi-tools status-ok" style="color:#f9b233"></i>BAND is under maintenance until November 23, 2026. </p>'

@@ -19,8 +19,10 @@ https://band.vm.fedcloud.eu
   the known pitfalls.
 
 ## This repository ##
-The Ansible code here is the deployment of the de.NBI Tübingen node
-(branch `tubi`; `main` currently follows it): Rocky Linux 9, Slurm 25.11,
+The Ansible code here deploys BAND per site, one branch each: the de.NBI
+Tübingen node (branch `tubi`; `main` currently follows it) and the
+Euro-BioImaging service on CESNET, https://band.vm.fedcloud.eu (branch
+`cesnet`, inventory `inventory_cesnet`). Rocky Linux 9, Slurm 25.11,
 GPU desktop nodes with NVIDIA drivers and VirtualGL, LDAP accounts, NFS homes,
 TigerVNC desktops and S3 bucket mounting. The cluster is installed by numbered
 playbooks `0_base.yml` … `7_desktop.yml`, which `cluster_installation.yml` runs
@@ -32,7 +34,8 @@ Not in the repository, by design. Placeholders are pushed instead:
 - **Site values.** Host IP addresses, server names (cluster domain, portal,
   LDAP server), the Keycloak realm URL and client ids, and the portal's admin
   and support e-mail addresses and SMTP host are set in
-  `group_vars/all/site.yml`, which git ignores. `inventory_tubi` and the vars
+  `group_vars/all/site.yml`, which git ignores. The inventory (`inventory_cesnet`
+  on this branch) and the vars
   files only refer to them. To deploy, copy `site.example.yml` to
   `group_vars/all/site.yml` and fill in your own values.
 - **`/etc/hosts`.** `files/etcHosts` is ignored too; start from
@@ -40,7 +43,7 @@ Not in the repository, by design. Placeholders are pushed instead:
 - **The vault password.** Passwords, keys and client secrets, as well as the
   SMTP user name and the welcome-mail sender, are encrypted with ansible-vault
   (`vars/passwords.yml`). `ansible.cfg` expects the password in
-  `~/.ansible/vault_pass_tubi`. For a new site, replace the encrypted values
+  `~/.ansible/vault_pass_cesnet` (`vault_pass_tubi` on branch `tubi`). For a new site, replace the encrypted values
   with your own, encrypted with your own vault password (see the
   "Secrets" section of NEW_INSTANCE.md).
 
