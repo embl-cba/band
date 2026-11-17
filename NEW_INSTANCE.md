@@ -231,7 +231,13 @@ playbook, so a step can be rerun alone. They target only
    login-0. With `slurmdbd_restore_dump` set, the dump is loaded into the
    empty `slurm_acct_db` before slurmdbd's first start (never over existing
    tables; slurmdbd converts them if Slurm is newer). Keep `ClusterName` and
-   set `FirstJobId` above the old job ids. Users need a Slurm account
+   set `FirstJobId` above the old job ids. Weekly backup
+   (`slurmdb-backup.timer`, Sundays 00:30 Europe/Berlin, `--tags
+   slurmdb_backup`): a `mysqldump` as the `slurmdb` user to
+   `/var/backups/slurmdb/` and `/nfs/local/backups/slurmdb/` (root only, 8
+   weeks); restore one with `slurmdbd_restore_dump`. A failed backup (this one
+   and Keycloak's) mails `failure_mail_to` (`site.yml`; role `failure_mail`,
+   the welcome mails' SMTP account). Users need a Slurm account
    (`AccountingStorageEnforce=limits`); root can't run jobs (`DisableRootJobs`).
 6. `6_provision_account.yml`: `/usr/local/sbin/provision_account.py` and a
    3-minute cron job on login-0: a home directory and a Slurm user in account

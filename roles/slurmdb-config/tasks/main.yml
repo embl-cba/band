@@ -100,3 +100,94 @@
       file:
         path: /root/slurm_acct_db-restore.sql.gz
         state: absent
+
+######## weekly backup of the accounting database (local, and a copy on the share)
+- name: "{{ slurmdb_backup_dir }}"
+  file:
+    path: "{{ slurmdb_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+  tags: slurmdb_backup
+
+# the slurmdb user may only reach the accounting database, and only over TCP
+# from slurmdbd's host (mysql_user_host), as slurmdbd itself connects
+- name: backup credentials
+  copy:
+    dest: /root/.slurmdb-backup.cnf
+    content: |
+      [client]
+      host={{ slurmdb_backup_db_host }}
+      user=slurmdb
+      password={{ slurmdb_passwd }}
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  become: yes
+  tags: slurmdb_backup
+
+# /usr/local/sbin is a link into the NFS share on this cluster: keep the
+# script local
+- name: backup script
+  template:
+    src: slurmdb-backup.sh.j2
+    dest: /usr/local/bin/slurmdb-backup
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+  tags: slurmdb_backup
+
+- name: mail when the backup fails
+  import_role:
+    name: failure_mail
+  when: failure_mail_to | default('') | length > 0
+  tags: slurmdb_backup
+
+- name: backup service and timer
+  copy:
+    dest: "/etc/systemd/system/{{ item.name }}"
+    content: "{{ item.content }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - name: slurmdb-backup.service
+      content: |
+        [Unit]
+        Description=Slurm accounting database backup (mysqldump)
+        Requires=mariadb.service
+        After=mariadb.service
+        {{ 'OnFailure=failure-mail@%n.service' if failure_mail_to | default('') else '' }}
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/bin/slurmdb-backup
+    - name: slurmdb-backup.timer
+      content: |
+        [Unit]
+        Description=Slurm accounting database backup, weekly
+
+        [Timer]
+        OnCalendar={{ slurmdb_backup_time }}
+        # catch up after the VM was off at that time
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+  loop_control:
+    label: "{{ item.name }}"
+  become: yes
+  tags: slurmdb_backup
+
+- name: backup timer enabled
+  systemd:
+    name: slurmdb-backup.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  become: yes
+  tags: slurmdb_backup

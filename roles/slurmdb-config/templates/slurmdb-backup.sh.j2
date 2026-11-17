@@ -1,0 +1,29 @@
+#!/bin/bash
+# Weekly backup of the Slurm accounting database (systemd: slurmdb-backup.timer).
+# mysqldump --single-transaction reads a consistent snapshot; slurmdbd keeps
+# running. Logs in as the slurmdb database user (/root/.slurmdb-backup.cnf).
+# Restore: load it into an empty database before slurmdbd starts
+# (site.yml: slurmdbd_restore_dump, see NEW_INSTANCE.md).
+set -euo pipefail
+umask 077
+D={{ slurmdb_backup_dir }}
+f=$D/{{ slurmdbd_db_name }}-$(date +%Y%m%d-%H%M).sql.gz
+# a failed run leaves no half-written file
+trap 'rm -f "$f.part"' EXIT
+mysqldump --defaults-extra-file=/root/.slurmdb-backup.cnf --single-transaction --quick \
+    --routines --triggers --events --databases {{ slurmdbd_db_name }} | gzip -6 > "$f.part"
+gzip -t "$f.part"
+zcat "$f.part" | tail -1 | grep -q '^-- Dump completed' || { rm -f "$f.part"; echo "incomplete dump" >&2; exit 1; }
+mv "$f.part" "$f"
+# keep {{ slurmdb_backup_keep_days }} days
+find "$D" -maxdepth 1 -name '{{ slurmdbd_db_name }}-*.sql.gz' -mtime +{{ slurmdb_backup_keep_days - 1 }} -delete
+echo "$f $(stat -c %s "$f") bytes, $(ls "$D"/{{ slurmdbd_db_name }}-*.sql.gz | wc -l) dumps kept"
+{% if slurmdb_backup_nfs_dir %}
+
+# a copy on the NFS share (autofs), root only
+N={{ slurmdb_backup_nfs_dir }}
+mkdir -p "$N" && chmod 700 "$N"
+cp "$f" "$N/$(basename "$f").part" && mv "$N/$(basename "$f").part" "$N/$(basename "$f")"
+find "$N" -maxdepth 1 -name '{{ slurmdbd_db_name }}-*.sql.gz' -mtime +{{ slurmdb_backup_keep_days - 1 }} -delete
+echo "copied to $N, $(ls "$N"/{{ slurmdbd_db_name }}-*.sql.gz | wc -l) dumps there"
+{% endif %}

@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+# Mails that a systemd unit failed (failure-mail@<unit>.service, started by
+# OnFailure=). Settings, with the SMTP password, in /etc/failure-mail.conf.
+import configparser, smtplib, socket, subprocess, sys
+from email.message import EmailMessage
+
+unit = sys.argv[1]
+c = configparser.ConfigParser(interpolation=None)
+c.read('/etc/failure-mail.conf')
+m = c['mail']
+host = socket.getfqdn()
+status = subprocess.run(['systemctl', 'status', '--no-pager', '--lines=30', unit],
+                        capture_output=True, text=True).stdout
+msg = EmailMessage()
+msg['Subject'] = f'[BAND] {unit} failed on {host}'
+msg['From'] = m['from']
+msg['To'] = m['to']
+msg.set_content(f'{unit} failed on {host}.\n\n{status}')
+port = int(m['port'])
+if port == 465:
+    s = smtplib.SMTP_SSL(m['host'], port, timeout=60)
+else:
+    s = smtplib.SMTP(m['host'], port, timeout=60)
+    s.starttls()
+if m['user']:
+    s.login(m['user'], m['password'])
+s.send_message(msg)
+s.quit()

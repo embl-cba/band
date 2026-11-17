@@ -176,6 +176,7 @@
 - name: TLS on this VM (nginx, Let's Encrypt)
   import_tasks: tls_local.yml
   when: keycloak_tls == 'local'
+  tags: keycloak_tls
 
 ######## nightly database backup (local, and a copy on the NFS share)
 - name: NFS client for the backup copy
@@ -193,6 +194,11 @@
     group: root
     mode: '0700'
   become: yes
+
+- name: mail when the backup fails
+  import_role:
+    name: failure_mail
+  when: failure_mail_to | default('') | length > 0
 
 - name: backup script
   template:
@@ -217,6 +223,7 @@
         Description=Keycloak database backup (pg_dump)
         Requires=docker.service
         After=docker.service
+        {{ 'OnFailure=failure-mail@%n.service' if failure_mail_to | default('') else '' }}
 
         [Service]
         Type=oneshot

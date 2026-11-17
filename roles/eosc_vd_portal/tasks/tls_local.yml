@@ -52,6 +52,17 @@
     label: "{{ item.option }}"
   become: yes
 
+# a certificate moved from a VM where certbot installed it into nginx keeps
+# "installer = nginx"; without the nginx plugin a real renewal would fail after
+# getting the certificate (a --dry-run doesn't show it). The hook below reloads.
+- name: no certbot installer
+  community.general.ini_file:
+    path: "/etc/letsencrypt/renewal/{{ eosc_portal_hostname }}.conf"
+    section: renewalparams
+    option: installer
+    state: absent
+  become: yes
+
 - name: reload nginx after a renewal
   copy:
     dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx

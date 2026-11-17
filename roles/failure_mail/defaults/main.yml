@@ -1,0 +1,6 @@
+---
+# Mail to this address when a unit with OnFailure=failure-mail@%n.service
+# fails (the backups). Empty: nothing is installed, no unit mails.
+failure_mail_to: ""
+# sent through the same SMTP account as the welcome mails (vars/passwords.yml)
+failure_mail_from: "{{ provision_mail_from | default('') }}"

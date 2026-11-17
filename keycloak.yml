@@ -6,5 +6,9 @@
 #     (add -e keycloak_import_override=true to replace an imported realm)
 - hosts: 'AuthNodes'
   gather_facts: true
+  pre_tasks:
+  # SMTP settings for the backup's failure mail (role failure_mail)
+  - include_vars: vars/passwords.yml
+    tags: always
   roles:
   - { role: keycloak }

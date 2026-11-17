@@ -1,0 +1,48 @@
+---
+- name: SMTP settings for failure mails
+  copy:
+    dest: /etc/failure-mail.conf
+    content: |
+      [mail]
+      host = {{ provision_smtp_host }}
+      port = {{ provision_smtp_port | default(465) }}
+      user = {{ provision_smtp_user | default('') }}
+      password = {{ provision_smtp_password | default('') }}
+      from = {{ failure_mail_from }}
+      to = {{ failure_mail_to }}
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  become: yes
+
+- name: failure mail sender
+  template:
+    src: failure-mail.py.j2
+    dest: /usr/local/bin/failure-mail
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+
+- name: failure-mail@.service
+  copy:
+    dest: /etc/systemd/system/failure-mail@.service
+    content: |
+      [Unit]
+      Description=Mail that %i failed
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/failure-mail %i
+    owner: root
+    group: root
+    mode: '0644'
+  register: failure_mail_unit
+  become: yes
+
+- name: systemd knows failure-mail@
+  systemd:
+    daemon_reload: yes
+  when: failure_mail_unit is changed
+  become: yes

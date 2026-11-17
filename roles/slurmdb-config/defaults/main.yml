@@ -1,3 +1,13 @@
 ---
 # the database slurmdbd.conf names (StorageLoc)
 slurmdbd_db_name: slurm_acct_db
+
+# weekly backup of the accounting database (mysqldump, consistent snapshot;
+# slurmdbd keeps running), kept slurmdb_backup_keep_days days here and, if
+# slurmdb_backup_nfs_dir is set, also there (on the NFS share)
+slurmdb_backup_dir: /var/backups/slurmdb
+slurmdb_backup_keep_days: 56
+slurmdb_backup_time: "Sun *-*-* 00:30:00 Europe/Berlin"
+slurmdb_backup_nfs_dir: /nfs/local/backups/slurmdb
+# where the backup connects (slurmdbd.conf StorageHost)
+slurmdb_backup_db_host: "{{ inventory_hostname }}"
