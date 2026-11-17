@@ -18,7 +18,6 @@ site_hosts:
   # Keycloak: new VM (Ubuntu 24.04), and the production one (Keycloak 4.5 in
   # docker, Ubuntu 20.04) until the switch-over; no playbook targets the old one
   band-auth:   10.0.0.23
-  band-auth-old: 10.0.0.24
 
 # kernel domainname on all nodes (0_base)
 site_domain: "cluster.example.org"
