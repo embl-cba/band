@@ -1,0 +1,50 @@
+# Users' own ~/.vnc/xstartup that are exactly a known broken default get the
+# current one (files/xstartup, the same as the vncserver script writes for new
+# users). The old file stays as xstartup.band-old; files users changed are
+# left alone. Takes effect from the user's next desktop.
+#   GNONE: the old nodes' default had "XDG_CURRENT_DESKTOP=GNOME-Flashback:GNONE"
+#   and no dbus-launch; GNOME then starts none of its settings services
+#   (gsd-*: text size, keyboard, power settings, ...)
+#   old CentOS default: runs /etc/X11/xinit/xinitrc, then kills the desktop
+# The homes are on the NFS share: done once, from one desktop node.
+- name: the current default xstartup, for reference and for the fix
+  become: yes
+  copy:
+    src: xstartup
+    dest: /etc/tigervnc/band-xstartup
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: replace broken default xstartup files in users' homes
+  become: yes
+  run_once: true
+  check_mode: false
+  shell:
+    cmd: |
+      set -eu
+      broken=" {{ vnc_xstartup_broken | join(' ') }} "
+      new=/etc/tigervnc/band-xstartup
+      n=0
+      for f in {{ vnc_home_root }}/*/.vnc/xstartup; do
+          [ -f "$f" ] && [ ! -L "$f" ] || continue
+          sum=$(sha256sum < "$f" | cut -d' ' -f1)
+          case "$broken" in *" $sum "*) ;; *) continue ;; esac
+          u=$(stat -c %U "$f")
+          case "$u" in root|UNKNOWN) echo "skipped (owner $u): $f"; continue ;; esac
+          n=$((n + 1))
+          if [ "{{ ansible_check_mode }}" = True ]; then echo "would fix: $f"; continue; fi
+          # as the user, in the user's own folder
+          runuser -u "$u" -- sh -c 'cp -p "$1" "$1.band-old" && cat > "$1.new" &&
+              chmod 755 "$1.new" && mv -f "$1.new" "$1"' sh "$f" < "$new" && echo "fixed: $f" || echo "FAILED: $f"
+      done
+      echo "broken xstartup files: $n"
+  register: xstartup_fix
+  changed_when: "'fixed: ' in xstartup_fix.stdout"
+  when: ansible_distribution == "Rocky"
+
+- name: xstartup files fixed
+  debug:
+    msg: "{{ xstartup_fix.stdout_lines | last }}"
+  run_once: true
+  when: xstartup_fix.stdout_lines is defined

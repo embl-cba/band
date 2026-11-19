@@ -1,0 +1,9 @@
+#!/bin/sh
+
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+source /etc/profile
+export XDG_CURRENT_DESKTOP=GNOME-Flashback:GNOME
+export GDK_BACKEND=x11
+eval $(dbus-launch --sh-syntax)
+exec gnome-session --session=gnome-flashback-metacity

@@ -124,3 +124,7 @@
   become: yes
   when: ansible_distribution == "Rocky"
 
+
+- name: fix users' broken default xstartup
+  include_tasks: fix_xstartup.yml
+  when: ansible_distribution == "Rocky"

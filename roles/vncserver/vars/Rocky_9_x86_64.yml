@@ -22,3 +22,10 @@
  system_group_packages:
    - "Server with GUI"
    - "graphical-server-environment"
+
+# users' homes (the NFS share) and the sha256 of known broken default
+# ~/.vnc/xstartup files (tasks/fix_xstartup.yml)
+ vnc_home_root: /nfs/home
+ vnc_xstartup_broken:
+   - f440665bed714311f02c5b4f905903aeb25bd8fda32654e6b50b2c9ce6322fc7   # GNONE, no dbus-launch
+   - c31aff4aeb161db95afccb73d02c36bc79b48ba885365167c8b33fc808ec5e2c   # old CentOS default (xinitrc, then vncserver -kill)
