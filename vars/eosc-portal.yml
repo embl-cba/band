@@ -39,6 +39,20 @@ portal_web_replacements:
   - name: desktop RAM limit on the Resources page
     regexp: '&lt;=80G RAM'
     replace: '&lt;=40G RAM'
+  # desktop sizes: the release's six plus common screens (4K, ultrawide,
+  # 16:10, laptops at 100/125%); the default stays 1900x900
+  - name: desktop resolutions
+    regexp: 'resolutions:\[`2560x1440`,`1920x1200`,`1920x1080`,`1900x900`,`1280x778`,`1024x768`\]'
+    replace: 'resolutions:[`3840x2160`,`3440x1440`,`2560x1600`,`2560x1440`,`2560x1080`,`1920x1200`,`1920x1080`,`1900x900`,`1680x1050`,`1600x900`,`1536x864`,`1440x900`,`1366x768`,`1280x800`,`1280x778`,`1024x768`]'
+  # the size a desktop starts with, until the browser sends its window size
+  - name: default desktop resolution
+    regexp: 'resolution:`1900x900`\}'
+    replace: 'resolution:`1600x900`}'
+  # Resources page: batch jobs run on the same nodes as the desktops (the
+  # release has the old instance's separate cluster, 192 CPUs, commented out)
+  - name: batch jobs on the Resources page
+    regexp: '(?s)<!--\s*<p>In addition to the above resources, the following resources can also be used for internal cluster jobs.*?-->'
+    replace: '<p>From a terminal in a BAND desktop, batch jobs can also be submitted to the SLURM scheduler (sbatch). They run on the same nodes and share the resources above with the desktops, so please request only what a job needs.</p>'
   # Status page: the cesnet cluster has 5 nodes (the release lists 8).
   # Node 4 is out of service (a GPU lost from the PCI bus, 2026-11-16).
   - name: nodes on the Status page
