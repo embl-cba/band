@@ -1,0 +1,22 @@
+/*
+ * managed by ansible (BAND, role eosc_vd_portal)
+ *
+ * Guacamole asks for a desktop of the browser window's size times the
+ * screen's pixel ratio (devicePixelRatio: 2 on a Mac Retina, 1.25 on a laptop
+ * at 125%, and browser zoom changes it too) and then shrinks it back into the
+ * window: there, the desktop's text came out at 1/ratio of its size, and
+ * zooming the browser didn't help. With the ratio fixed at
+ * {{ guacamole_pixel_ratio }}, the desktop is the window's size in CSS
+ * pixels: normal text on every screen, and browser zoom enlarges it.
+ */
+(function () {
+    var ratio = {{ guacamole_pixel_ratio | float }};
+    try {
+        Object.defineProperty(window, 'devicePixelRatio', {
+            configurable: true,
+            get: function () { return ratio; }
+        });
+    } catch (e) {
+        /* leave Guacamole's default */
+    }
+})();

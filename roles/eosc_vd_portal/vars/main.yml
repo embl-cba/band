@@ -65,6 +65,12 @@ band_guac_ext_sha256: 4bccd2185851183f7bddb846cef50c2a47d49d56631f1c7a157cac94f6
 # Guacamole may only SSH/SFTP to these: the desktop nodes' addresses, as the
 # portal's execHost gives them (getent hosts on the login node)
 band_ssh_hosts: "{{ groups['DesktopNodes'] | map('extract', hostvars, 'ansible_ssh_host') | list }}"
+## pixel ratio the Guacamole page sees (templates/band-pixel-ratio, a JS-only
+## extension): 1 makes desktops the window's size in CSS pixels, so their text
+## is normal size on high-DPI screens and browser zoom works; "" removes it
+guacamole_pixel_ratio: 1
+guacamole_pixel_ratio_jar: band-pixel-ratio.jar
+
 ## gson for the extension (not in guacamole.war)
 gson_version: 2.14.0
 gson_url: "https://repo1.maven.org/maven2/com/google/code/gson/gson/{{ gson_version }}/gson-{{ gson_version }}.jar"

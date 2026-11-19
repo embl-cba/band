@@ -177,6 +177,60 @@
   become: yes
   notify: restart tomcat
 
+# JS-only extension (templates/band-pixel-ratio): the page sees the pixel ratio
+# guacamole_pixel_ratio, so desktops get the window's size in CSS pixels and
+# their text isn't shrunk on high-DPI screens. Built here: a jar is a zip.
+- name: pixel ratio extension sources
+  become: yes
+  file:
+    path: "{{ guacamole_home }}/band-pixel-ratio-src"
+    state: "{{ 'directory' if guacamole_pixel_ratio | string | length > 0 else 'absent' }}"
+    mode: '0755'
+
+- name: pixel ratio extension files
+  become: yes
+  template:
+    src: "band-pixel-ratio/{{ item }}.j2"
+    dest: "{{ guacamole_home }}/band-pixel-ratio-src/{{ item }}"
+    mode: '0644'
+  loop:
+    - guac-manifest.json
+    - band-pixel-ratio.js
+  register: pixel_ratio_src
+  when: guacamole_pixel_ratio | string | length > 0
+
+- name: pixel ratio extension installed
+  become: yes
+  stat:
+    path: "{{ guacamole_home }}/extensions/{{ guacamole_pixel_ratio_jar }}"
+  register: pixel_ratio_jar
+
+- name: pixel ratio extension
+  become: yes
+  command:
+    cmd: >-
+      python3 -m zipfile -c {{ guacamole_home }}/extensions/{{ guacamole_pixel_ratio_jar }}
+      guac-manifest.json band-pixel-ratio.js
+    chdir: "{{ guacamole_home }}/band-pixel-ratio-src"
+  when: guacamole_pixel_ratio | string | length > 0 and not ansible_check_mode and
+        (pixel_ratio_src is changed or not pixel_ratio_jar.stat.exists)
+  notify: restart tomcat
+
+- name: pixel ratio extension mode
+  become: yes
+  file:
+    path: "{{ guacamole_home }}/extensions/{{ guacamole_pixel_ratio_jar }}"
+    mode: '0644'
+  when: guacamole_pixel_ratio | string | length > 0 and not ansible_check_mode
+
+- name: no pixel ratio extension
+  become: yes
+  file:
+    path: "{{ guacamole_home }}/extensions/{{ guacamole_pixel_ratio_jar }}"
+    state: absent
+  when: guacamole_pixel_ratio | string | length == 0
+  notify: restart tomcat
+
 # two extensions or two gson versions must not be loaded side by side
 - name: remove what earlier versions installed
   file:
