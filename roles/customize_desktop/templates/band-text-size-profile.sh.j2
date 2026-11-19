@@ -1,0 +1,14 @@
+# managed by ansible (BAND, role customize_desktop)
+# Java programs in the desktop draw at the text size the user chose with
+# "Text Size" (band-text-size); GNOME and Qt programs follow the GNOME setting
+# themselves. Only in desktops (DISPLAY set): the desktop start (xstartup)
+# reads /etc/profile.
+if [ -n "${DISPLAY:-}" ] && [ -r "$HOME/.config/band-desktop/text-scale" ]; then
+    _band_ts=$(head -c 8 "$HOME/.config/band-desktop/text-scale")
+    case "$_band_ts" in
+    [12].[0-9]*)
+        # Swing/AWT (Fiji, ...) and JavaFX (QuPath, ...)
+        export _JAVA_OPTIONS="${_JAVA_OPTIONS:+$_JAVA_OPTIONS }-Dsun.java2d.uiScale=$_band_ts -Dglass.gtk.uiScale=$_band_ts" ;;
+    esac
+    unset _band_ts
+fi

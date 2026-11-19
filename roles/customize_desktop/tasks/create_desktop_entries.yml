@@ -18,6 +18,16 @@
     mode: '0755'
   loop: "{{ desktop_scripts }}"
 
+# Java programs follow the user's "Text Size" choice (band-text-size)
+- name: Text size for Java programs
+  become: yes
+  template:
+    src: band-text-size-profile.sh.j2
+    dest: /etc/profile.d/band-text-size.sh
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: Launchers
   become: yes
   template:

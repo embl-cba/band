@@ -1,0 +1,68 @@
+#!/bin/bash
+# managed by ansible (BAND, role customize_desktop)
+# Text size of the user's desktops, 100-200%. For screens where the desktop
+# text is too small: Guacamole scales the whole desktop to the browser window,
+# and browser zoom doesn't change that, so the desktop itself has to draw
+# larger. Kept in the user's home, so every later desktop has it too.
+#   - GNOME: panel, menus, terminal, Firefox, file manager: at once
+#   - Qt programs (napari, CellPose, ...): their fonts, when started again
+#     (gsd-xsettings passes the size on as Xft.dpi)
+#   - Java programs (Fiji, QuPath, ...): from the next desktop
+#     (/etc/profile.d/band-text-size.sh)
+#
+#   band-text-size         choose in a window (desktop menu: Accessories)
+#   band-text-size 150     set 150%
+#   band-text-size --show  the current size
+set -eu
+
+CONF=$HOME/.config/band-desktop
+FILE=$CONF/text-scale            # the factor for Java programs, e.g. 1.50
+SIZES="100 125 150 175 200"
+
+factor() { gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null || echo 1.0; }
+percent() { awk -v f="$1" 'BEGIN { printf "%d", f * 100 + 0.5 }'; }
+
+say() {
+    if [ -n "${DISPLAY:-}" ] && command -v zenity >/dev/null; then
+        zenity "--${2:-info}" --no-wrap --title "Text Size" --text "$1" >/dev/null 2>&1 || true
+    else
+        echo -e "$1" >&2
+    fi
+}
+
+cur=$(percent "$(factor)")
+case "${1:-}" in
+--show)
+    echo "${cur}%"; exit 0 ;;
+"")
+    if [ -z "${DISPLAY:-}" ] || ! command -v zenity >/dev/null; then
+        echo "text size ${cur}%; set it with: band-text-size <$(echo $SIZES | tr ' ' '|')>" >&2
+        exit 1
+    fi
+    rows=()
+    for s in $SIZES; do
+        [ "$s" = "$cur" ] && on=TRUE || on=FALSE
+        case $s in 100) label="normal";; 200) label="double";; *) label="";; esac
+        rows+=("$on" "$s%" "$label")
+    done
+    pct=$(zenity --list --radiolist --title "Text Size" --width 340 --height 330 \
+        --text "Text size of your desktops (now ${cur}%).\nIf the text is too small on your screen, choose a larger size." \
+        --column "" --column "Size" --column "" "${rows[@]}" 2>/dev/null) || exit 0
+    pct=${pct%\%}
+    [ -n "$pct" ] || exit 0 ;;
+*)
+    pct=${1%\%} ;;
+esac
+
+case " $SIZES " in
+*" $pct "*) ;;
+*) say "Text size $pct% is not offered; choose one of: $SIZES" error; exit 1 ;;
+esac
+
+f=$(awk -v p="$pct" 'BEGIN { printf "%.2f", p / 100 }')
+gsettings set org.gnome.desktop.interface text-scaling-factor "$f"
+mkdir -p "$CONF"
+if [ "$pct" = 100 ]; then rm -f "$FILE"; else echo "$f" > "$FILE"; fi
+
+[ "$pct" = "$cur" ] && exit 0
+say "Text size is now $pct%.\n\nThe panel, menus and GNOME programs change at once.\nOther programs that are open: close and start them again.\nJava programs (Fiji, QuPath, ...): from your next desktop."

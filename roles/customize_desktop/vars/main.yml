@@ -9,6 +9,9 @@ c: "{{ desktop_containers_dir }}"
 # category: X-ImageAnalysis, X-DataAccess, X-vEM (own submenus, files/gnome-config.menu)
 # or a standard one (Development, Office, System)
 desktop_launchers:
+  # larger text for screens where the desktop looks too small (band-text-size)
+  - {file: band-text-size, name: "Text Size", icon: preferences-desktop-font, category: Utility,
+     exec: "/usr/local/bin/band-text-size"}
   - {file: aspera, name: "Aspera Client", icon: aspera.png, category: X-DataAccess,
      exec: "/bin/singularity run --nv {{ c }}/aspera"}
   - {file: cellpose32d, name: "CellPose3 2D", icon: cellpose.png, category: X-ImageAnalysis,
@@ -76,3 +79,4 @@ desktop_launchers_removed: []
 desktop_scripts:
   - run_napari_vgl.sh
   - start_matlab.sh
+  - band-text-size
